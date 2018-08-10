@@ -25,29 +25,47 @@ class TestEmsBigqueryClient(TestCase):
         bigquery_module_patch.Client.assert_called_once_with("some-project-id")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_submit_batch_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
+    def test_run_async_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "some-job-id"
-
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        result_job_id = ems_bigquery_client.submit_batch_query(self.test_query)
 
-        query_mock_result = self.client_mock.query.call_args_list[0][0]
+        result_job_id = ems_bigquery_client.run_async_query(self.test_query)
 
-        assert self.test_query == query_mock_result[0]
-        assert QueryPriority.BATCH == query_mock_result[1].priority
+        query_mock_result = self.client_mock.query.call_args_list[0][1]
+
+        assert self.test_query == query_mock_result['query']
+        assert QueryPriority.INTERACTIVE == query_mock_result['job_config'].priority
+        assert query_mock_result['job_id_prefix'] is None
         assert "some-job-id" == result_job_id
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_submit_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
+    def test_run_async_query_submitsBatchQueryWithProperJobIdPrefixAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        test_job_id_prefix = "some-prefix"
+        self.query_job_mock.job_id = test_job_id_prefix + "some-job-id"
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+
+        result_job_id = ems_bigquery_client.run_async_query(query=self.test_query, job_id_prefix=test_job_id_prefix)
+
+        query_mock_result = self.client_mock.query.call_args_list[0][1]
+
+        assert self.test_query == query_mock_result['query']
+        assert QueryPriority.INTERACTIVE == query_mock_result['job_config'].priority
+        assert query_mock_result['job_id_prefix'] is test_job_id_prefix
+        assert test_job_id_prefix + "some-job-id" == result_job_id
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.result.return_value = Mock(RowIterator)
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
         result_rows = ems_bigquery_client.run_sync_query(self.test_query)
 
-        query_mock_result = self.client_mock.query.call_args_list[0][0]
+        query_mock_result = self.client_mock.query.call_args_list[0][1]
 
-        assert self.test_query == query_mock_result[0]
-        assert QueryPriority.INTERACTIVE == query_mock_result[1].priority
+        assert self.test_query == query_mock_result['query']
+        assert QueryPriority.INTERACTIVE == query_mock_result['job_config'].priority
+        assert query_mock_result['job_id_prefix'] is None
         assert isinstance(result_rows, Iterable)
