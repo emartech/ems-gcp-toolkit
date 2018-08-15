@@ -11,8 +11,10 @@ from bigquery.ems_bigquery_client import EmsBigqueryClient
 
 class TestEmsBigqueryClient(TestCase):
 
+    QUERY = "HELLO * BELLO"
+    JOB_ID = "some-job-id"
+
     def setUp(self):
-        self.test_query = "HELLO * BELLO"
         self.client_mock = Mock()
         self.query_job_mock = Mock(QueryJob)
 
@@ -26,15 +28,12 @@ class TestEmsBigqueryClient(TestCase):
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
-        bigquery_module_patch.Client.return_value = self.client_mock
-        self.query_job_mock.job_id = "some-job-id"
-        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        ems_bigquery_client = self.__setup_client(bigquery_module_patch)
 
-        result_job_id = ems_bigquery_client.run_async_query(self.test_query)
+        result_job_id = ems_bigquery_client.run_async_query(self.QUERY)
 
         arguments = self.client_mock.query.call_args_list[0][1]
-
-        assert self.test_query == arguments["query"]
+        assert self.QUERY == arguments["query"]
         assert "EU" == arguments["location"]
         assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
         assert arguments["job_id_prefix"] is None
@@ -42,52 +41,55 @@ class TestEmsBigqueryClient(TestCase):
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_usesCustomLocation(self, bigquery_module_patch: bigquery):
-        bigquery_module_patch.Client.return_value = self.client_mock
-        self.query_job_mock.job_id = "some-job-id"
-        ems_bigquery_client = EmsBigqueryClient("some-project-id", "WONDERLAND")
+        ems_bigquery_client = self.__setup_client(bigquery_module_patch, location="WONDERLAND")
 
-        ems_bigquery_client.run_async_query(self.test_query)
+        ems_bigquery_client.run_async_query(self.QUERY)
 
         arguments = self.client_mock.query.call_args_list[0][1]
         assert "WONDERLAND" == arguments["location"]
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_run_async_query_submitsBatchQueryWithProperJobIdPrefixAndReturnsWithResultIterator(self,
-                                                                                                bigquery_module_patch: bigquery):
-        bigquery_module_patch.Client.return_value = self.client_mock
+    def test_run_async_query_submitsBatchQueryWithProperJobIdPrefixAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
+        ems_bigquery_client = self.__setup_client(bigquery_module_patch)
         test_job_id_prefix = "some-prefix"
-        self.query_job_mock.job_id = test_job_id_prefix + "some-job-id"
-        ems_bigquery_client = EmsBigqueryClient("some-project-id")
 
-        result_job_id = ems_bigquery_client.run_async_query(query=self.test_query, job_id_prefix=test_job_id_prefix)
+        ems_bigquery_client.run_async_query(query=self.QUERY, job_id_prefix=test_job_id_prefix)
 
         arguments = self.client_mock.query.call_args_list[0][1]
-
-        assert self.test_query == arguments["query"]
         assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
-        assert arguments["job_id_prefix"] is test_job_id_prefix
-        assert test_job_id_prefix + "some-job-id" == result_job_id
+        assert test_job_id_prefix == arguments["job_id_prefix"]
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
-        bigquery_module_patch.Client.return_value = self.client_mock
-        self.query_job_mock.result.return_value = [
-            Row((42, "hello"), {"int_column": 0, "str_column": 1}),
-            Row((1024, "wonderland"), {"int_column": 0, "str_column": 1})
-        ]
+        ems_bigquery_client = self.__setup_client(bigquery_module_patch,
+                                                  [
+                                                      Row((42, "hello"), {"int_column": 0, "str_column": 1}),
+                                                      Row((1024, "wonderland"), {"int_column": 0, "str_column": 1})
+                                                  ]
+                                                  )
 
-        ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        result_rows = ems_bigquery_client.run_sync_query(self.test_query)
+        result_rows = ems_bigquery_client.run_sync_query(self.QUERY)
 
         first_row = next(result_rows)
         second_row = next(result_rows)
-
         arguments = self.client_mock.query.call_args_list[0][1]
-
-        assert self.test_query == arguments["query"]
+        assert self.QUERY == arguments["query"]
         assert "EU" == arguments["location"]
         assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
         assert arguments["job_id_prefix"] is None
         assert isinstance(result_rows, Iterable)
         assert first_row == {"int_column": 42, "str_column": "hello"}
         assert second_row == {"int_column": 1024, "str_column": "wonderland"}
+
+    def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        self.query_job_mock.job_id = self.JOB_ID
+        if location is not None:
+            ems_bigquery_client = EmsBigqueryClient("some-project-id", location)
+        else:
+            ems_bigquery_client = EmsBigqueryClient("some-project-id")
+
+        if return_value is not None:
+            self.query_job_mock.result.return_value = return_value
+
+        return ems_bigquery_client

@@ -27,7 +27,3 @@ class EmsBigqueryClient:
                                             job_config=job_config,
                                             job_id_prefix=job_id_prefix,
                                             location=self.__location)
-
-# TODO
-# decide what to return in case of empty result set
-# return Iterator which contains schema and returns row (dict)
