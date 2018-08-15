@@ -1,6 +1,7 @@
+from collections import Iterable
+
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob
-from google.cloud.bigquery.table import RowIterator
 
 from bigquery.ems_query_priority import EmsQueryPriority
 
@@ -15,10 +16,9 @@ class EmsBigqueryClient:
                         priority: EmsQueryPriority = EmsQueryPriority.INTERACTIVE) -> str:
         return self.__execute_query_job(query=query, priority=priority, job_id_prefix=job_id_prefix).job_id
 
-    def run_sync_query(self, query: str) -> RowIterator:
+    def run_sync_query(self, query: str) -> Iterable:
         for row in self.__execute_query_job(query=query, priority=EmsQueryPriority.INTERACTIVE).result():
-            yield row
-        # return self.__execute_query_job(query=query, priority=EmsQueryPriority.INTERACTIVE).result()
+            yield dict(list(row.items()))
 
     def __execute_query_job(self, query: str, priority: EmsQueryPriority, job_id_prefix=None) -> QueryJob:
         job_config = QueryJobConfig()
@@ -29,5 +29,5 @@ class EmsBigqueryClient:
                                             location=self.__location)
 
 # TODO
+# decide what to return in case of empty result set
 # return Iterator which contains schema and returns row (dict)
-# content of a row should be mapped properly, no indirect mapping as in GCP API

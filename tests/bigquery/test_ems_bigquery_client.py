@@ -71,12 +71,16 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        self.query_job_mock.result.return_value = [Row((1, "hello"), {'x': 0, 'y': 1})]
+        self.query_job_mock.result.return_value = [
+            Row((42, "hello"), {"int_column": 0, "str_column": 1}),
+            Row((1024, "wonderland"), {"int_column": 0, "str_column": 1})
+        ]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
         result_rows = ems_bigquery_client.run_sync_query(self.test_query)
 
-        actual_row = next(result_rows)
+        first_row = next(result_rows)
+        second_row = next(result_rows)
 
         arguments = self.client_mock.query.call_args_list[0][1]
 
@@ -85,4 +89,5 @@ class TestEmsBigqueryClient(TestCase):
         assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
         assert arguments["job_id_prefix"] is None
         assert isinstance(result_rows, Iterable)
-        assert actual_row == Row((1, "hello"), {'x': 0, 'y': 1})
+        assert first_row == {"int_column": 42, "str_column": "hello"}
+        assert second_row == {"int_column": 1024, "str_column": "wonderland"}
