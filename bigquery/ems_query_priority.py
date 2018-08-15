@@ -1,3 +1,3 @@
-class EmsQueryPriority(object):
-    INTERACTIVE = 'INTERACTIVE'
-    BATCH = 'BATCH'
+class EmsQueryPriority:
+    INTERACTIVE = "INTERACTIVE"
+    BATCH = "BATCH"
