@@ -5,7 +5,7 @@ setup(
     version="",
     packages=["tests", "bigquery"],
     url="",
-    license="",
+    license="MIT",
     author="ems",
     author_email="",
     description="",
