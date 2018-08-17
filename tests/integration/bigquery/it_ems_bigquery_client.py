@@ -30,14 +30,16 @@ class ItEmsBigqueryClient(TestCase):
     def setUp(self):
         table_reference = TableReference(self.DATASET.reference, "test_table")
         self.test_table = Table(table_reference, [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")])
+        self.__delete_if_exists(self.test_table)
+        self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
 
+        self.client = EmsBigqueryClient(self.GCP_PROJECT_ID)
+
+    def __delete_if_exists(self, table):
         try:
-            self.GCP_BIGQUERY_CLIENT.delete_table(self.test_table)
+            self.GCP_BIGQUERY_CLIENT.delete_table(table)
         except NotFound:
             pass
-
-        self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
-        self.client = EmsBigqueryClient(self.GCP_PROJECT_ID)
 
     def test_run_sync_query_dummyQuery(self):
         result = self.client.run_sync_query(self.DUMMY_QUERY)
@@ -57,10 +59,10 @@ class ItEmsBigqueryClient(TestCase):
 
     def test_run_sync_query_onExistingData(self):
         query = self.INSERT_TEMPLATE.format(self.__get_table_path())
-
         self.client.run_sync_query(query)
 
         query_result = self.client.run_sync_query(self.SELECT_TEMPLATE.format(self.__get_table_path()))
+
         assert [{"int_data": 1, "str_data": "hello"}] == list(query_result)
 
     def test_run_async_query_submitsJob(self):
