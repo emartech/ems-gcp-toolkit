@@ -9,6 +9,7 @@ from google.cloud.bigquery import Dataset, DatasetReference, Table, TableReferen
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
+from bigquery.ems_query_config import EmsQueryConfig
 
 
 class ItEmsBigqueryClient(TestCase):
@@ -18,6 +19,7 @@ class ItEmsBigqueryClient(TestCase):
     DUMMY_QUERY = "SELECT 1 AS data"
     INSERT_TEMPLATE = "INSERT INTO `{}` (int_data, str_data) VALUES (1, 'hello')"
     SELECT_TEMPLATE = "SELECT * FROM `{}`"
+    DUMMY_SELECT_TO_TABLE = "SELECT 1 AS int_data, 'hello' AS str_data"
 
     @classmethod
     def setUpClass(cls):
@@ -66,6 +68,18 @@ class ItEmsBigqueryClient(TestCase):
         query_result = self.client.run_sync_query(self.SELECT_TEMPLATE.format(self.__get_table_path()))
 
         assert [{"int_data": 1, "str_data": "hello"}] == list(query_result)
+
+    def test_run_sync_query_withDestinationSet(self):
+        ems_query_config = EmsQueryConfig(
+            destination_dataset=ItEmsBigqueryClient.DATASET.dataset_id,
+            destination_table=self.test_table.table_id
+        )
+        query_with_destination_result = list(self.client.run_sync_query(self.DUMMY_SELECT_TO_TABLE,
+                                                                        ems_query_config=ems_query_config))
+        query_result = list(self.client.run_sync_query(self.SELECT_TEMPLATE.format(self.__get_table_path())))
+
+        assert [{"int_data": 1, "str_data": "hello"}] == query_result
+        assert query_with_destination_result == query_result
 
     def test_run_async_query_submitsJob(self):
         job_id = self.client.run_async_query(self.DUMMY_QUERY)

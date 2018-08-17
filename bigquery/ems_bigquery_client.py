@@ -2,7 +2,7 @@ from collections import Iterable
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJobConfig, QueryJob
+from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_query_config import EmsQueryConfig, EmsQueryPriority
@@ -11,6 +11,7 @@ from bigquery.ems_query_config import EmsQueryConfig, EmsQueryPriority
 class EmsBigqueryClient:
 
     def __init__(self, project_id: str, location: str = "EU"):
+        self.__project_id = project_id
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
@@ -23,25 +24,40 @@ class EmsBigqueryClient:
                                         ems_query_config=ems_query_config,
                                         job_id_prefix=job_id_prefix).job_id
 
-    def run_sync_query(self, query: str) -> Iterable:
+    def run_sync_query(self, query: str,
+                       ems_query_config: EmsQueryConfig = EmsQueryConfig(
+                           priority=EmsQueryPriority.INTERACTIVE)) -> Iterable:
+        if ems_query_config.priority != EmsQueryPriority.INTERACTIVE:
+            raise EmsApiError("Sync query must be run with INTERACTIVE priority!")
         try:
             return self.__get_mapped_iterator(
                 self.__execute_query_job(query=query,
-                                         ems_query_config=EmsQueryConfig(
-                                             priority=EmsQueryPriority.INTERACTIVE)).result()
+                                         ems_query_config=ems_query_config).result()
             )
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query: {}!".format(e.args[0]))
 
     def __execute_query_job(self, query: str, ems_query_config: EmsQueryConfig, job_id_prefix=None) -> QueryJob:
-        job_config = QueryJobConfig()
-        job_config.priority = ems_query_config.priority
         return self.__bigquery_client.query(query=query,
-                                            job_config=job_config,
+                                            job_config=(self.__create_job_config(ems_query_config)),
                                             job_id_prefix=job_id_prefix,
                                             location=self.__location)
 
+    def __create_job_config(self, ems_query_config: EmsQueryConfig):
+        job_config = QueryJobConfig()
+        job_config.priority = ems_query_config.priority
+        if ems_query_config.destination_table is not None:
+            table_reference = TableReference(
+                DatasetReference(
+                    self.__project_id,
+                    ems_query_config.destination_dataset),
+                ems_query_config.destination_table)
+            job_config.destination = table_reference
+            job_config.write_disposition = ems_query_config.write_disposition
+            job_config.create_disposition = ems_query_config.create_disposition
+        return job_config
+
     @staticmethod
-    def __get_mapped_iterator(result):
+    def __get_mapped_iterator(result: Iterable):
         for row in result:
             yield dict(list(row.items()))
