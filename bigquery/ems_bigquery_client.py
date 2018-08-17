@@ -20,8 +20,8 @@ class EmsBigqueryClient:
 
     def run_sync_query(self, query: str) -> Iterable:
         try:
-            result = self.__execute_query_job(query=query, priority=EmsQueryPriority.INTERACTIVE).result()
-            return self.__get_mapped_iterator(result)
+            return self.__get_mapped_iterator(
+                self.__execute_query_job(query=query, priority=EmsQueryPriority.INTERACTIVE).result())
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query: {}!".format(e.args[0]))
 
