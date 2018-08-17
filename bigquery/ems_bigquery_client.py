@@ -5,7 +5,7 @@ from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob
 
 from bigquery.ems_api_error import EmsApiError
-from bigquery.ems_query_priority import EmsQueryPriority
+from bigquery.ems_query_config import EmsQueryConfig, EmsQueryPriority
 
 
 class EmsBigqueryClient:
@@ -14,20 +14,28 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
-    def run_async_query(self, query: str, job_id_prefix: str = None,
-                        priority: EmsQueryPriority = EmsQueryPriority.INTERACTIVE) -> str:
-        return self.__execute_query_job(query=query, priority=priority, job_id_prefix=job_id_prefix).job_id
+    def run_async_query(self,
+                        query: str,
+                        job_id_prefix: str = None,
+                        ems_query_config: EmsQueryConfig = EmsQueryConfig(
+                            priority=EmsQueryPriority.INTERACTIVE)) -> str:
+        return self.__execute_query_job(query=query,
+                                        ems_query_config=ems_query_config,
+                                        job_id_prefix=job_id_prefix).job_id
 
     def run_sync_query(self, query: str) -> Iterable:
         try:
             return self.__get_mapped_iterator(
-                self.__execute_query_job(query=query, priority=EmsQueryPriority.INTERACTIVE).result())
+                self.__execute_query_job(query=query,
+                                         ems_query_config=EmsQueryConfig(
+                                             priority=EmsQueryPriority.INTERACTIVE)).result()
+            )
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query: {}!".format(e.args[0]))
 
-    def __execute_query_job(self, query: str, priority: EmsQueryPriority, job_id_prefix=None) -> QueryJob:
+    def __execute_query_job(self, query: str, ems_query_config: EmsQueryConfig, job_id_prefix=None) -> QueryJob:
         job_config = QueryJobConfig()
-        job_config.priority = priority
+        job_config.priority = ems_query_config.priority
         return self.__bigquery_client.query(query=query,
                                             job_config=job_config,
                                             job_id_prefix=job_id_prefix,
