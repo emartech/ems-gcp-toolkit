@@ -82,16 +82,22 @@ class TestEmsBigqueryClient(TestCase):
         assert second_row == {"int_column": 1024, "str_column": "wonderland"}
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_run_sync_wraps_gcp_errors(self, bigquery_module_patch: bigquery):
+    def test_run_sync_query_wrapsGcpErrors(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
         self.client_mock.query.side_effect = GoogleAPIError("BOOM!")
 
-        result = ems_bigquery_client.run_sync_query("SELECT * FROM `non_existing_dataset.whatever`")
-
         with self.assertRaises(EmsApiError) as context:
-            list(result)
+            ems_bigquery_client.run_sync_query("SELECT * FROM `non_existing_dataset.whatever`")
 
         assert "Error caused while running query: {}!".format("BOOM!") in context.exception.args[0]
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_run_sync_query_callsGcpEvenIfResultNotUsed(self, bigquery_module_patch: bigquery):
+        ems_bigquery_client = self.__setup_client(bigquery_module_patch, [])
+
+        ems_bigquery_client.run_sync_query(self.QUERY)
+
+        self.client_mock.query.assert_called_once()
 
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
         bigquery_module_patch.Client.return_value = self.client_mock

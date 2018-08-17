@@ -42,10 +42,8 @@ class ItEmsBigqueryClient(TestCase):
         assert {"data": 1} == rows[0]
 
     def test_run_sync_query_nonExistingDataset(self):
-        result = self.client.run_sync_query("SELECT * FROM `non_existing_dataset.whatever`")
-
         with self.assertRaises(EmsApiError) as context:
-            list(result)
+            self.client.run_sync_query("SELECT * FROM `non_existing_dataset.whatever`")
 
         error_message = context.exception.args[0].lower()
         assert "not found" in error_message
@@ -54,11 +52,10 @@ class ItEmsBigqueryClient(TestCase):
 
     def test_run_sync_query_onExistingData(self):
         query = self.INSERT_TEMPLATE.format(self.get_table_path())
-        insert_result = self.client.run_sync_query(query)
-        list(insert_result)
+
+        self.client.run_sync_query(query)
 
         query_result = self.client.run_sync_query(self.SELECT_TEMPLATE.format(self.get_table_path()))
-
         assert [{"int_data": 1, "str_data": "hello"}] == list(query_result)
 
     def test_run_async_query_submitsJob(self):
