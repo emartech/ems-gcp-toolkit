@@ -12,6 +12,8 @@ from bigquery.ems_bigquery_client import EmsBigqueryClient
 
 
 class ItEmsBigqueryClient(TestCase):
+    GCP_BIGQUERY_CLIENT = None
+    DATASET = None
     GCP_PROJECT_ID = os.environ["GCP_PROJECT_ID"]
     DUMMY_QUERY = "SELECT 1 AS data"
     INSERT_TEMPLATE = "INSERT INTO `{}` (int_data, str_data) VALUES (1, 'hello')"
@@ -45,7 +47,7 @@ class ItEmsBigqueryClient(TestCase):
         result = self.client.run_sync_query(self.DUMMY_QUERY)
 
         rows = list(result)
-        assert 1 == len(rows)
+        assert len(rows) == 1
         assert {"data": 1} == rows[0]
 
     def test_run_sync_query_nonExistingDataset(self):
