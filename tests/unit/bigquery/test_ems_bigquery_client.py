@@ -104,7 +104,7 @@ class TestEmsBigqueryClient(TestCase):
             ems_bigquery_client.run_sync_query(self.QUERY,
                                                ems_query_config=EmsQueryConfig(priority=EmsQueryPriority.BATCH))
 
-        assert "Sync query must be run with INTERACTIVE priority!" == context.exception.args[0]
+        assert context.exception.args[0] == "Sync query must be run with INTERACTIVE priority!"
 
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
         project_id = "some-project-id"
