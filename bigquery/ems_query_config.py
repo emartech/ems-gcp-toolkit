@@ -1,15 +1,18 @@
-class EmsWriteDisposition:
+from enum import Enum
+
+
+class EmsWriteDisposition(Enum):
     WRITE_APPEND = "WRITE_APPEND"
     WRITE_TRUNCATE = "WRITE_TRUNCATE"
     WRITE_EMPTY = "WRITE_EMPTY"
 
 
-class EmsCreateDisposition:
+class EmsCreateDisposition(Enum):
     CREATE_IF_NEEDED = "CREATE_IF_NEEDED"
     CREATE_NEVER = "CREATE_NEVER"
 
 
-class EmsQueryPriority:
+class EmsQueryPriority(Enum):
     INTERACTIVE = "INTERACTIVE"
     BATCH = "BATCH"
 

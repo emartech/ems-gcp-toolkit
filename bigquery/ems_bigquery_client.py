@@ -45,7 +45,7 @@ class EmsBigqueryClient:
 
     def __create_job_config(self, ems_query_config: EmsQueryConfig):
         job_config = QueryJobConfig()
-        job_config.priority = ems_query_config.priority
+        job_config.priority = ems_query_config.priority.value
         if ems_query_config.destination_table is not None:
             table_reference = TableReference(
                 DatasetReference(
@@ -53,8 +53,8 @@ class EmsBigqueryClient:
                     ems_query_config.destination_dataset),
                 ems_query_config.destination_table)
             job_config.destination = table_reference
-            job_config.write_disposition = ems_query_config.write_disposition
-            job_config.create_disposition = ems_query_config.create_disposition
+            job_config.write_disposition = ems_query_config.write_disposition.value
+            job_config.create_disposition = ems_query_config.create_disposition.value
         return job_config
 
     @staticmethod
