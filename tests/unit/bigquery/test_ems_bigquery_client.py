@@ -65,18 +65,18 @@ class TestEmsBigqueryClient(TestCase):
                                                   ]
                                                   )
 
-        result_rows = ems_bigquery_client.run_sync_query(self.QUERY)
+        result_rows_iterator = ems_bigquery_client.run_sync_query(self.QUERY)
+        result_rows = [row for row in result_rows_iterator]
 
-        first_row = next(result_rows)
-        second_row = next(result_rows)
         arguments = self.client_mock.query.call_args_list[0][1]
         assert self.QUERY == arguments["query"]
         assert arguments["location"] == "EU"
         assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
         assert arguments["job_id_prefix"] is None
-        assert isinstance(result_rows, Iterable)
-        assert first_row == {"int_column": 42, "str_column": "hello"}
-        assert second_row == {"int_column": 1024, "str_column": "wonderland"}
+        assert isinstance(result_rows_iterator, Iterable)
+        assert len(result_rows) == 2
+        assert result_rows[0] == {"int_column": 42, "str_column": "hello"}
+        assert result_rows[1] == {"int_column": 1024, "str_column": "wonderland"}
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_sync_query_wrapsGcpErrors(self, bigquery_module_patch: bigquery):
