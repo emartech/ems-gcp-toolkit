@@ -9,10 +9,10 @@ class TestEmsQueryJob(TestCase):
         self.ems_query_job = EmsQueryJob("test-job-id", EmsQueryState.DONE, self.errors)
 
     def test_errors(self):
-        self.assertEquals(self.ems_query_job.errors, self.errors)
+        self.assertEqual(self.ems_query_job.errors, self.errors)
 
     def test_state(self):
-        self.assertEquals(self.ems_query_job.state, EmsQueryState.DONE)
+        self.assertEqual(self.ems_query_job.state, EmsQueryState.DONE)
 
     def test_job_id(self):
         self.assertEqual(self.ems_query_job.job_id, "test-job-id")
@@ -24,4 +24,3 @@ class TestEmsQueryJob(TestCase):
         not_failed_ems_query_job = EmsQueryJob("test-job-id", EmsQueryState.DONE, None)
 
         self.assertFalse(not_failed_ems_query_job.is_failed)
-
