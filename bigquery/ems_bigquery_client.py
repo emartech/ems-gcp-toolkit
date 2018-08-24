@@ -35,7 +35,7 @@ class EmsBigqueryClient:
                                          ems_query_config=ems_query_config).result()
             )
         except GoogleAPIError as e:
-            raise EmsApiError("Error caused while running query: {}!".format(e.args[0]))
+            raise EmsApiError("Error caused while running query | {} |: {}!".format(query, e.args[0]))
 
     def __execute_query_job(self, query: str, ems_query_config: EmsQueryConfig, job_id_prefix=None) -> QueryJob:
         return self.__bigquery_client.query(query=query,
