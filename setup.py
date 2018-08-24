@@ -1,15 +1,15 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name="ems-gcp-toolkit",
-    version="",
-    packages=["tests", "bigquery"],
-    url="",
+    version="0.0.1rc2",
+    packages=["bigquery"],
+    url="https://github.com/emartech/ems-gcp-toolkit",
     license="MIT",
-    author="ems",
+    author="Emarsys",
     author_email="",
     description="",
     install_requires=[
-        "google-cloud-bigquery"
+        "google-cloud-bigquery==1.5.0"
     ],
 )
