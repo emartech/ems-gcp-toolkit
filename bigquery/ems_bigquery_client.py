@@ -6,7 +6,9 @@ from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, Data
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_query_config import EmsQueryConfig, EmsQueryPriority
+import logging
 
+logger = logging.getLogger(__name__)
 
 class EmsBigqueryClient:
 
@@ -24,11 +26,12 @@ class EmsBigqueryClient:
                                         ems_query_config=ems_query_config,
                                         job_id_prefix=job_id_prefix).job_id
 
-    def run_sync_query(self, query: str,
-                       ems_query_config: EmsQueryConfig = EmsQueryConfig(
-                           priority=EmsQueryPriority.INTERACTIVE)) -> Iterable:
-        if ems_query_config.priority != EmsQueryPriority.INTERACTIVE:
-            raise EmsApiError("Sync query must be run with INTERACTIVE priority!")
+    def run_sync_query(self,
+                       query: str,
+                       ems_query_config: EmsQueryConfig = EmsQueryConfig(priority=EmsQueryPriority.INTERACTIVE)
+                       ) -> Iterable:
+
+        logger.info("Sync query executed with priority: %s", ems_query_config.priority)
         try:
             return self.__get_mapped_iterator(
                 self.__execute_query_job(query=query,
@@ -43,7 +46,7 @@ class EmsBigqueryClient:
                                             job_id_prefix=job_id_prefix,
                                             location=self.__location)
 
-    def __create_job_config(self, ems_query_config: EmsQueryConfig):
+    def __create_job_config(self, ems_query_config: EmsQueryConfig) -> QueryJobConfig:
         job_config = QueryJobConfig()
         job_config.priority = ems_query_config.priority.value
         if ems_query_config.destination_table is not None:

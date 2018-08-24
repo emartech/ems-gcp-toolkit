@@ -96,16 +96,6 @@ class TestEmsBigqueryClient(TestCase):
 
         self.client_mock.query.assert_called_once()
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_run_sync_query_mustBeRunAsInteractive(self, bigquery_module_patch: bigquery):
-        ems_bigquery_client = self.__setup_client(bigquery_module_patch)
-
-        with self.assertRaises(EmsApiError) as context:
-            ems_bigquery_client.run_sync_query(self.QUERY,
-                                               ems_query_config=EmsQueryConfig(priority=EmsQueryPriority.BATCH))
-
-        assert context.exception.args[0] == "Sync query must be run with INTERACTIVE priority!"
-
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
         project_id = "some-project-id"
         bigquery_module_patch.Client.return_value = self.client_mock
