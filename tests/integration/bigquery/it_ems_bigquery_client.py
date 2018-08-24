@@ -13,6 +13,7 @@ from bigquery.ems_query_config import EmsQueryConfig
 
 
 class ItEmsBigqueryClient(TestCase):
+    ONE_DAY_IN_MS = 3600000 * 24
     GCP_BIGQUERY_CLIENT = None
     DATASET = None
     GCP_PROJECT_ID = os.environ["GCP_PROJECT_ID"]
@@ -21,6 +22,7 @@ class ItEmsBigqueryClient(TestCase):
     SELECT_TEMPLATE = "SELECT * FROM `{}`"
     DUMMY_SELECT_TO_TABLE = "SELECT 1 AS int_data, 'hello' AS str_data"
 
+    # TODO fix test dataset, temp table for each test case
     @classmethod
     def setUpClass(cls):
         cls.GCP_BIGQUERY_CLIENT = bigquery.Client(cls.GCP_PROJECT_ID, location="EU")
@@ -94,7 +96,9 @@ class ItEmsBigqueryClient(TestCase):
 
     @classmethod
     def __create_test_dataset(cls):
-        return Dataset(DatasetReference(cls.GCP_PROJECT_ID, cls.__generate_unique_id()))
+        dataset = Dataset(DatasetReference(cls.GCP_PROJECT_ID, cls.__generate_unique_id()))
+        dataset.default_table_expiration_ms = cls.ONE_DAY_IN_MS
+        return dataset
 
     @staticmethod
     def __generate_unique_id():
