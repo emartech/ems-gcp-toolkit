@@ -90,6 +90,13 @@ class ItEmsBigqueryClient(TestCase):
 
         assert job.state is not None
 
+    def test_run_get_job_list(self):
+        unique_id = self.__generate_unique_id()
+        self.GCP_BIGQUERY_CLIENT.query(self.DUMMY_QUERY, job_id=unique_id)
+        jobs_iterator = self.client.get_job_list()
+        found = unique_id in [job.job_id for job in jobs_iterator]
+        assert found
+
     def __get_table_path(self):
         return "{}.{}.{}".format(ItEmsBigqueryClient.GCP_PROJECT_ID, ItEmsBigqueryClient.DATASET.dataset_id,
                                  self.test_table.table_id)

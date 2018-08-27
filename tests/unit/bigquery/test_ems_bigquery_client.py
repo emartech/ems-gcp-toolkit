@@ -9,7 +9,7 @@ from google.cloud.bigquery.table import Row
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
-from bigquery.ems_query_config import EmsQueryConfig, EmsQueryPriority
+from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
 
 
 class TestEmsBigqueryClient(TestCase):
@@ -98,6 +98,35 @@ class TestEmsBigqueryClient(TestCase):
         ems_bigquery_client.run_sync_query(self.QUERY)
 
         self.client_mock.query.assert_called_once()
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_get_job_list_returnWithEmptyIterator(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        self.client_mock.list_jobs.return_value = []
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        job_list_iterable = ems_bigquery_client.get_job_list()
+
+        result = list(job_list_iterable)
+        assert result == []
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_get_job_list_returnWithEmsQuryJobIterator(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        self.query_job_mock.job_id = "123"
+        self.query_job_mock.state = "DONE"
+        self.query_job_mock.errors = None
+        self.client_mock.list_jobs.return_value = [self.query_job_mock]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        job_list_iterable = ems_bigquery_client.get_job_list()
+
+        result = list(job_list_iterable)
+        assert len(result) == 1
+        assert isinstance(result[0], EmsQueryJob)
+        assert result[0].state == EmsQueryState("DONE")
+        assert result[0].job_id == "123"
+        assert result[0].errors is None
 
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
         project_id = "some-project-id"

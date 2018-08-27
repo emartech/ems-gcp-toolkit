@@ -7,8 +7,10 @@ from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, Data
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_query_config import EmsQueryConfig, EmsQueryPriority
 import logging
+from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
 
 logger = logging.getLogger(__name__)
+
 
 class EmsBigqueryClient:
 
@@ -16,6 +18,10 @@ class EmsBigqueryClient:
         self.__project_id = project_id
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
+
+    def get_job_list(self) -> Iterable:
+        for job in self.__bigquery_client.list_jobs():
+            yield EmsQueryJob(job.job_id, EmsQueryState(job.state), job.errors)
 
     def run_async_query(self,
                         query: str,
