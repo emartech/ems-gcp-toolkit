@@ -32,7 +32,9 @@ class EmsBigqueryClient:
         Yields:
             EmsQueryJob: the next job
         """
-        for job in self.__bigquery_client.list_jobs(min_creation_time=min_creation_time,
+        for job in self.__bigquery_client.list_jobs(all_users=True,
+                                                    max_results=20,
+                                                    min_creation_time=min_creation_time,
                                                     max_creation_time=max_creation_time):
             yield EmsQueryJob(job.job_id, EmsQueryState(job.state), job.errors)
 
