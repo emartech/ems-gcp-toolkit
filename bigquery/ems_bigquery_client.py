@@ -1,4 +1,5 @@
 from collections import Iterable
+from datetime import datetime
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
@@ -19,8 +20,20 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
-    def get_job_list(self) -> Iterable:
-        for job in self.__bigquery_client.list_jobs():
+    def get_job_list(self, min_creation_time: datetime=None, max_creation_time: datetime=None) -> Iterable:
+        """
+        Args:
+            min_creation_time (datetime.datetime, optional):
+                If set, only jobs created after or at this timestamp are returned.
+                If the datetime has no time zone assumes UTC time.
+            max_creation_time (datetime.datetime, optional):
+                If set, only jobs created before or at this timestamp are returned.
+                If the datetime has no time zone assumes UTC time.
+        Yields:
+            EmsQueryJob: the next job
+        """
+        for job in self.__bigquery_client.list_jobs(min_creation_time=min_creation_time,
+                                                    max_creation_time=max_creation_time):
             yield EmsQueryJob(job.job_id, EmsQueryState(job.state), job.errors)
 
     def run_async_query(self,

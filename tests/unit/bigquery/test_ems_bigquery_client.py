@@ -111,7 +111,7 @@ class TestEmsBigqueryClient(TestCase):
         assert result == []
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_get_job_list_returnWithEmsQuryJobIterator(self, bigquery_module_patch: bigquery):
+    def test_get_job_list_returnWithEmsQueryJobIterator(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
         self.query_job_mock.state = "DONE"
