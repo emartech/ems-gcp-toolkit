@@ -91,8 +91,7 @@ class ItEmsBigqueryClient(TestCase):
         assert job.state is not None
 
     def test_run_get_job_list(self):
-        unique_id = self.__generate_unique_id()
-        self.GCP_BIGQUERY_CLIENT.query("SELECT 1111 AS data", job_id=unique_id).result()
+        unique_id = self.client.run_async_query(self.DUMMY_QUERY)
         jobs_iterator = self.client.get_job_list()
         found = unique_id in [job.job_id for job in jobs_iterator]
         assert found
