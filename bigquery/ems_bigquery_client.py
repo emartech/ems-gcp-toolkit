@@ -3,7 +3,7 @@ from datetime import datetime
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference
+from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_query_config import EmsQueryConfig, EmsQueryPriority
@@ -70,7 +70,7 @@ class EmsBigqueryClient:
     def __create_job_config(self, ems_query_config: EmsQueryConfig) -> QueryJobConfig:
         job_config = QueryJobConfig()
         job_config.priority = ems_query_config.priority.value
-        job_config.time_partitioning = True
+        job_config.time_partitioning = TimePartitioning("DAY")
         if ems_query_config.destination_table is not None:
             table_reference = TableReference(
                 DatasetReference(
