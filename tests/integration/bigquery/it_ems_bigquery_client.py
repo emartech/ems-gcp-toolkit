@@ -5,7 +5,7 @@ import uuid as uuid
 
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
-from google.cloud.bigquery import Dataset, DatasetReference, Table, TableReference, SchemaField
+from google.cloud.bigquery import Dataset, DatasetReference, Table, TableReference, SchemaField, TimePartitioning
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
@@ -36,6 +36,7 @@ class ItEmsBigqueryClient(TestCase):
     def setUp(self):
         table_reference = TableReference(self.DATASET.reference, "test_table")
         self.test_table = Table(table_reference, [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")])
+        self.test_table.time_partitioning = TimePartitioning("DAY")
         self.__delete_if_exists(self.test_table)
         self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
 
