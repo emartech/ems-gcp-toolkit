@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="ems-gcp-toolkit",
-    version="0.0.1",
+    version="0.0.2",
     packages=["bigquery"],
     url="https://github.com/emartech/ems-gcp-toolkit",
     license="MIT",

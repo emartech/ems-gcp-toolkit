@@ -70,6 +70,7 @@ class EmsBigqueryClient:
     def __create_job_config(self, ems_query_config: EmsQueryConfig) -> QueryJobConfig:
         job_config = QueryJobConfig()
         job_config.priority = ems_query_config.priority.value
+        job_config.use_legacy_sql = False
         if ems_query_config.destination_table is not None:
             job_config.time_partitioning = TimePartitioning("DAY")
             table_reference = TableReference(
