@@ -1,3 +1,4 @@
 /.idea
 /dist
 /ems_gcp_toolkit.egg-info
+**/__pycache__
