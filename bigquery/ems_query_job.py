@@ -9,10 +9,11 @@ class EmsQueryState(Enum):
 
 
 class EmsQueryJob:
-    def __init__(self, job_id: str, state: EmsQueryState, errors: Union[list, None]):
+    def __init__(self, job_id: str, query: str, state: EmsQueryState, errors: Union[list, None]):
         self.__job_id = job_id
         self.__state = state
         self.__errors = errors
+        self.__query = query
 
     @property
     def errors(self) -> list:
@@ -29,3 +30,8 @@ class EmsQueryJob:
     @property
     def is_failed(self) -> bool:
         return self.__errors is not None
+
+    @property
+    def query(self) -> str:
+        return self.__query
+

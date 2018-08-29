@@ -36,7 +36,8 @@ class EmsBigqueryClient:
                                                     max_results=20,
                                                     min_creation_time=min_creation_time,
                                                     max_creation_time=max_creation_time):
-            yield EmsQueryJob(job.job_id, EmsQueryState(job.state), job.errors)
+            if isinstance(job, QueryJob):
+                yield EmsQueryJob(job.job_id, job.query, EmsQueryState(job.state), job.errors)
 
     def run_async_query(self,
                         query: str,

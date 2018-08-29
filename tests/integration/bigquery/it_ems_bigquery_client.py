@@ -1,3 +1,4 @@
+import datetime
 import os
 from unittest import TestCase
 
@@ -6,6 +7,7 @@ import uuid as uuid
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 from google.cloud.bigquery import Dataset, DatasetReference, Table, TableReference, SchemaField, TimePartitioning
+from google.cloud.exceptions import Conflict
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
@@ -26,16 +28,19 @@ class ItEmsBigqueryClient(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.GCP_BIGQUERY_CLIENT = bigquery.Client(cls.GCP_PROJECT_ID, location="EU")
-        cls.DATASET = cls.__create_test_dataset()
-        cls.GCP_BIGQUERY_CLIENT.create_dataset(cls.DATASET)
+        cls.DATASET = cls.__dataset()
+        cls.__create_dataset_if_not_exists(cls.DATASET)
 
     @classmethod
-    def tearDownClass(cls):
-        cls.GCP_BIGQUERY_CLIENT.delete_dataset(cls.DATASET, True)
+    def __create_dataset_if_not_exists(cls, dataset: Dataset):
+        try:
+            cls.GCP_BIGQUERY_CLIENT.create_dataset(dataset)
+        except Conflict:
+            pass
 
     def setUp(self):
-        table_reference = TableReference(self.DATASET.reference, "test_table")
-        self.test_table = Table(table_reference, [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")])
+        self.table_reference = TableReference(self.DATASET.reference, "test_table_" + str(int(datetime.datetime.utcnow().timestamp() * 1000)))
+        self.test_table = Table(self.table_reference, [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")])
         self.test_table.time_partitioning = TimePartitioning("DAY")
         self.__delete_if_exists(self.test_table)
         self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
@@ -97,16 +102,15 @@ class ItEmsBigqueryClient(TestCase):
         found = unique_id in [job.job_id for job in jobs_iterator]
         assert found
 
+    def test_get_job_list_returnsOnlyQueryJobs(self):
+        self.GCP_BIGQUERY_CLIENT.copy_table(sources=self.table_reference, destination=TableReference(self.DATASET, self.table_reference.table_id + "_copy"))
+
     def __get_table_path(self):
         return "{}.{}.{}".format(ItEmsBigqueryClient.GCP_PROJECT_ID, ItEmsBigqueryClient.DATASET.dataset_id,
                                  self.test_table.table_id)
 
     @classmethod
-    def __create_test_dataset(cls):
-        dataset = Dataset(DatasetReference(cls.GCP_PROJECT_ID, cls.__generate_unique_id()))
+    def __dataset(cls):
+        dataset = Dataset(DatasetReference(cls.GCP_PROJECT_ID, "it_test_dataset"))
         dataset.default_table_expiration_ms = cls.ONE_DAY_IN_MS
         return dataset
-
-    @staticmethod
-    def __generate_unique_id():
-        return "it_test_{}".format(uuid.uuid4().hex)

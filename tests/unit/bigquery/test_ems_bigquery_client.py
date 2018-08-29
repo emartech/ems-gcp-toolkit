@@ -114,6 +114,7 @@ class TestEmsBigqueryClient(TestCase):
     def test_get_job_list_returnWithEmsQueryJobIterator(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
+        self.query_job_mock.query = "SELECT 1"
         self.query_job_mock.state = "DONE"
         self.query_job_mock.errors = None
         self.client_mock.list_jobs.return_value = [self.query_job_mock]
@@ -126,6 +127,7 @@ class TestEmsBigqueryClient(TestCase):
         assert isinstance(result[0], EmsQueryJob)
         assert result[0].state == EmsQueryState("DONE")
         assert result[0].job_id == "123"
+        assert result[0].query == "SELECT 1"
         assert result[0].errors is None
 
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
