@@ -12,6 +12,8 @@ from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
 
 logger = logging.getLogger(__name__)
 
+RETRY = "-retry-"
+
 
 class EmsBigqueryClient:
 
@@ -41,8 +43,14 @@ class EmsBigqueryClient:
 
     def get_failed_jobs(self, job_prefix: str) -> list:
         jobs = self.get_job_list()
+        # TODO use is_failed
         matched_jobs = filter(lambda x: job_prefix in x.job_id and len(x.errors) > 0, jobs)
         return list(matched_jobs)
+
+    def launch_query_job(self, jobs: list, job_prefix: str, retry_limit: int=3):
+        for job in jobs:
+            prefix_with_retry = self.__decorate_with_retry(job.job_id, job_prefix, retry_limit)
+            self.run_async_query(job.query, prefix_with_retry)
 
     def run_async_query(self,
                         query: str,
@@ -66,6 +74,19 @@ class EmsBigqueryClient:
             )
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query | {} |: {}!".format(query, e.args[0]))
+
+    def __decorate_with_retry(self, job_id: str, job_prefix: str, retry_limit: int):
+        retry_counter = 0
+        if RETRY in job_id:
+            retry_counter = self.__get_retry_counter(job_id, job_prefix)
+        prefix_with_retry = job_prefix + RETRY + str(retry_counter + 1)
+
+        if retry_counter >= retry_limit:
+            raise RetryLimitExceededError()
+        return prefix_with_retry
+
+    def __get_retry_counter(self, job_id, job_id_prefix):
+        return int(job_id[len(job_id_prefix) + len(RETRY)])
 
     def __execute_query_job(self, query: str, ems_query_config: EmsQueryConfig, job_id_prefix=None) -> QueryJob:
         return self.__bigquery_client.query(query=query,
@@ -93,3 +114,7 @@ class EmsBigqueryClient:
     def __get_mapped_iterator(result: Iterable):
         for row in result:
             yield dict(list(row.items()))
+
+
+class RetryLimitExceededError(Exception):
+    pass
