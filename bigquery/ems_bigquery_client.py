@@ -38,12 +38,11 @@ class EmsBigqueryClient:
                                                     max_results=20,
                                                     min_creation_time=min_creation_time):
             if isinstance(job, QueryJob):
-                yield EmsQueryJob(job.job_id, job.query, EmsQueryState(job.state), job.errors)
+                yield EmsQueryJob(job.job_id, job.query, EmsQueryState(job.state), job.error_result)
 
     def get_failed_jobs(self, job_prefix: str, min_creation_time: datetime) -> list:
         jobs = self.get_job_list(min_creation_time)
-        # TODO use is_failed
-        matched_jobs = filter(lambda x: job_prefix in x.job_id and len(x.errors) > 0, jobs)
+        matched_jobs = filter(lambda x: job_prefix in x.job_id and x.is_failed, jobs)
         return list(matched_jobs)
 
     def launch_query_job(self, jobs: list, job_prefix: str, retry_limit: int=3):

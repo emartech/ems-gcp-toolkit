@@ -117,7 +117,7 @@ class TestEmsBigqueryClient(TestCase):
         self.query_job_mock.job_id = "123"
         self.query_job_mock.query = "SELECT 1"
         self.query_job_mock.state = "DONE"
-        self.query_job_mock.errors = None
+        self.query_job_mock.error_result = None
         self.client_mock.list_jobs.return_value = [self.query_job_mock]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -129,7 +129,7 @@ class TestEmsBigqueryClient(TestCase):
         assert result[0].state == EmsQueryState("DONE")
         assert result[0].job_id == "123"
         assert result[0].query == "SELECT 1"
-        assert result[0].errors is None
+        assert result[0].is_failed is False
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_failed_jobs_returnsEmptyIfNoFailedJobFoundWithTheGivenPrefix(self, bigquery_module_patch: bigquery):
@@ -163,12 +163,12 @@ class TestEmsBigqueryClient(TestCase):
 
         self.assertTrue(len(jobs) == 1)
         self.assertEqual(jobs[0].job_id, "prefixed-some-job-id")
-        self.assertTrue(len(jobs[0].errors) != 0)
+        self.assertTrue(jobs[0].is_failed)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_startsQueryJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, ["error"])
+        job = EmsQueryJob("prefixed-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, {})
         jobs = [job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -181,8 +181,8 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        first_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 1 QUERY", EmsQueryState.DONE, ["error"])
-        second_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 2 QUERY", EmsQueryState.DONE, ["error"])
+        first_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 1 QUERY", EmsQueryState.DONE, {})
+        second_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 2 QUERY", EmsQueryState.DONE, {})
         jobs = [first_job, second_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -196,7 +196,7 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-retry-1-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, ["error"])
+        job = EmsQueryJob("prefixed-retry-1-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, {})
         jobs = [job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -208,7 +208,7 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_raisesExceptionIfRetryCountExceedsTheGivenLimit(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-retry-2-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, ["error"])
+        job = EmsQueryJob("prefixed-retry-2-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, {})
         jobs = [job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -216,11 +216,12 @@ class TestEmsBigqueryClient(TestCase):
         self.assertRaises(RetryLimitExceededError, ems_bigquery_client.launch_query_job(jobs, "prefixed"))
 
     def __create_query_job_mock(self, job_id: str, has_error: bool):
+        error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occured'}
         query_job_mock = Mock(QueryJob)
         query_job_mock.job_id = job_id
         query_job_mock.query = "SIMPLE QUERY"
         query_job_mock.state = "DONE"
-        query_job_mock.errors = ["some-error-occurred"] if has_error else []
+        query_job_mock.error_result = error_result if has_error else None
         return query_job_mock
 
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
