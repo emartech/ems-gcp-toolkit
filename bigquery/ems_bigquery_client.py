@@ -39,6 +39,11 @@ class EmsBigqueryClient:
             if isinstance(job, QueryJob):
                 yield EmsQueryJob(job.job_id, job.query, EmsQueryState(job.state), job.errors)
 
+    def get_failed_jobs(self, job_prefix: str) -> list:
+        jobs = self.get_job_list()
+        matched_jobs = filter(lambda x: job_prefix in x.job_id and len(x.errors) > 0, jobs)
+        return list(matched_jobs)
+
     def run_async_query(self,
                         query: str,
                         job_id_prefix: str = None,

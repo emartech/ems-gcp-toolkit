@@ -2,8 +2,6 @@ import datetime
 import os
 from unittest import TestCase
 
-import uuid as uuid
-
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 from google.cloud.bigquery import Dataset, DatasetReference, Table, TableReference, SchemaField, TimePartitioning
@@ -24,7 +22,6 @@ class ItEmsBigqueryClient(TestCase):
     SELECT_TEMPLATE = "SELECT * FROM `{}`"
     DUMMY_SELECT_TO_TABLE = "SELECT 1 AS int_data, 'hello' AS str_data"
 
-    # TODO fix test dataset, temp table for each test case
     @classmethod
     def setUpClass(cls):
         cls.GCP_BIGQUERY_CLIENT = bigquery.Client(cls.GCP_PROJECT_ID, location="EU")
@@ -39,8 +36,10 @@ class ItEmsBigqueryClient(TestCase):
             pass
 
     def setUp(self):
-        self.table_reference = TableReference(self.DATASET.reference, "test_table_" + str(int(datetime.datetime.utcnow().timestamp() * 1000)))
-        self.test_table = Table(self.table_reference, [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")])
+        table_name = "test_table_" + str(int(datetime.datetime.utcnow().timestamp() * 1000))
+        table_schema = [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")]
+        self.table_reference = TableReference(self.DATASET.reference, table_name)
+        self.test_table = Table(self.table_reference, table_schema)
         self.test_table.time_partitioning = TimePartitioning("DAY")
         self.__delete_if_exists(self.test_table)
         self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
@@ -103,7 +102,8 @@ class ItEmsBigqueryClient(TestCase):
         assert found
 
     def test_get_job_list_returnsOnlyQueryJobs(self):
-        self.GCP_BIGQUERY_CLIENT.copy_table(sources=self.table_reference, destination=TableReference(self.DATASET, self.table_reference.table_id + "_copy"))
+        table_reference = TableReference(self.DATASET, self.table_reference.table_id + "_copy")
+        self.GCP_BIGQUERY_CLIENT.copy_table(sources=self.table_reference, destination=table_reference)
 
     def __get_table_path(self):
         return "{}.{}.{}".format(ItEmsBigqueryClient.GCP_PROJECT_ID, ItEmsBigqueryClient.DATASET.dataset_id,

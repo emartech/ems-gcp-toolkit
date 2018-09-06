@@ -130,6 +130,44 @@ class TestEmsBigqueryClient(TestCase):
         assert result[0].query == "SELECT 1"
         assert result[0].errors is None
 
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_get_failed_jobs_returnsEmptyIfNoFailedJobFoundWithTheGivenPrefix(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        self.client_mock.list_jobs.return_value = []
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        query_jobs = ems_bigquery_client.get_failed_jobs("prefixed")
+
+        self.assertEqual(query_jobs, [])
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_get_failed_jobs_returnsFilteredJobs_ifFailedJobFoundWithSpecificJobIdPrefix(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        failed_prefixed_query_job_mock = self.__create_query_job_mock("prefixed-some-job-id", True)
+        succeeded_prefixed_query_job_mock = self.__create_query_job_mock("prefixed-some-job-id", False)
+        succeeded_non_prefixed_query_job_mock = self.__create_query_job_mock("some-job-id", False)
+
+        self.client_mock.list_jobs.return_value = [failed_prefixed_query_job_mock,
+                                                   succeeded_prefixed_query_job_mock,
+                                                   succeeded_non_prefixed_query_job_mock]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        jobs = ems_bigquery_client.get_failed_jobs("prefixed")
+
+        self.assertTrue(len(jobs) == 1)
+        self.assertEqual(jobs[0].job_id, "prefixed-some-job-id")
+        self.assertTrue(len(jobs[0].errors) != 0)
+
+
+    def __create_query_job_mock(self, job_id: str, has_error: bool):
+        query_job_mock = Mock(QueryJob)
+        query_job_mock.job_id = job_id
+        query_job_mock.query = "SIMPLE QUERY"
+        query_job_mock.state = "DONE"
+        query_job_mock.errors = ["some-error-occurred"] if has_error else []
+        return query_job_mock
+
+
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
         project_id = "some-project-id"
         bigquery_module_patch.Client.return_value = self.client_mock
