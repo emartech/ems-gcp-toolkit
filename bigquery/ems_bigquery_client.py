@@ -38,7 +38,15 @@ class EmsBigqueryClient:
                                                     max_results=20,
                                                     min_creation_time=min_creation_time):
             if isinstance(job, QueryJob):
-                yield EmsQueryJob(job.job_id, job.query, EmsQueryState(job.state), job.error_result)
+                config = EmsQueryConfig(job.priority,
+                                        job.destination.dataset_id,
+                                        job.destination.table_id,
+                                        job.create_disposition,
+                                        job.write_disposition)
+                yield EmsQueryJob(job.job_id, job.query,
+                                  config,
+                                  EmsQueryState(job.state),
+                                  job.error_result)
 
     def get_failed_jobs(self, job_prefix: str, min_creation_time: datetime) -> list:
         jobs = self.get_job_list(min_creation_time)
@@ -48,7 +56,7 @@ class EmsBigqueryClient:
     def launch_query_job(self, jobs: list, job_prefix: str, retry_limit: int=3):
         for job in jobs:
             prefix_with_retry = self.__decorate_with_retry(job.job_id, job_prefix, retry_limit)
-            self.run_async_query(job.query, prefix_with_retry)
+            self.run_async_query(job.query, prefix_with_retry, job.query_config)
 
     def run_async_query(self,
                         query: str,

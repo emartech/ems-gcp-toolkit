@@ -10,6 +10,7 @@ from google.cloud.bigquery.table import Row
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
+from bigquery.ems_query_config import EmsQueryConfig
 from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
 
 
@@ -20,6 +21,7 @@ class TestEmsBigqueryClient(TestCase):
     def setUp(self):
         self.client_mock = Mock()
         self.query_job_mock = Mock(QueryJob)
+        self.query_config = EmsQueryConfig(destination_dataset="some_dataset", destination_table="some_table")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
@@ -130,6 +132,7 @@ class TestEmsBigqueryClient(TestCase):
         assert result[0].job_id == "123"
         assert result[0].query == "SELECT 1"
         assert result[0].is_failed is False
+        assert isinstance(result[0].query_config, EmsQueryConfig)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_failed_jobs_returnsEmptyIfNoFailedJobFoundWithTheGivenPrefix(self, bigquery_module_patch: bigquery):
@@ -168,7 +171,7 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_startsQueryJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, {})
+        job = EmsQueryJob("prefixed-some-job-id", "SIMPLE QUERY", self.query_config, EmsQueryState.DONE, {})
         jobs = [job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -181,8 +184,8 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        first_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 1 QUERY", EmsQueryState.DONE, {})
-        second_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 2 QUERY", EmsQueryState.DONE, {})
+        first_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 1 QUERY", self.query_config, EmsQueryState.DONE, {})
+        second_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 2 QUERY", self.query_config, EmsQueryState.DONE, {})
         jobs = [first_job, second_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -196,7 +199,7 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-retry-1-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, {})
+        job = EmsQueryJob("prefixed-retry-1-some-job-id", "SIMPLE QUERY", self.query_config, EmsQueryState.DONE, {})
         jobs = [job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
@@ -208,7 +211,7 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_launch_query_job_raisesExceptionIfRetryCountExceedsTheGivenLimit(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-retry-2-some-job-id", "SIMPLE QUERY", EmsQueryState.DONE, {})
+        job = EmsQueryJob("prefixed-retry-2-some-job-id", "SIMPLE QUERY", self.query_config, EmsQueryState.DONE, {})
         jobs = [job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
