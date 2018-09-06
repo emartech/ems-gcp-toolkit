@@ -36,13 +36,12 @@ class EmsBigqueryClient:
         """
         for job in self.__bigquery_client.list_jobs(all_users=True,
                                                     max_results=20,
-                                                    min_creation_time=min_creation_time,
-                                                    max_creation_time=max_creation_time):
+                                                    min_creation_time=min_creation_time):
             if isinstance(job, QueryJob):
                 yield EmsQueryJob(job.job_id, job.query, EmsQueryState(job.state), job.errors)
 
-    def get_failed_jobs(self, job_prefix: str) -> list:
-        jobs = self.get_job_list()
+    def get_failed_jobs(self, job_prefix: str, min_creation_time: datetime) -> list:
+        jobs = self.get_job_list(min_creation_time)
         # TODO use is_failed
         matched_jobs = filter(lambda x: job_prefix in x.job_id and len(x.errors) > 0, jobs)
         return list(matched_jobs)

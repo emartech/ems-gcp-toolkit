@@ -1,4 +1,5 @@
 from collections import Iterable
+from datetime import datetime
 from unittest import TestCase
 from unittest.mock import patch, Mock
 
@@ -136,9 +137,13 @@ class TestEmsBigqueryClient(TestCase):
         self.client_mock.list_jobs.return_value = []
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        query_jobs = ems_bigquery_client.get_failed_jobs("prefixed")
+        min_creation_time = datetime.now()
+        query_jobs = ems_bigquery_client.get_failed_jobs("prefixed", min_creation_time)
 
         self.assertEqual(query_jobs, [])
+        self.client_mock.list_jobs.assert_called_with(all_users=True,
+                                                      max_results=20,
+                                                      min_creation_time=min_creation_time)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_failed_jobs_returnsFilteredJobs_ifFailedJobFoundWithSpecificJobIdPrefix(
@@ -154,7 +159,7 @@ class TestEmsBigqueryClient(TestCase):
                                                    succeeded_non_prefixed_query_job_mock]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        jobs = ems_bigquery_client.get_failed_jobs("prefixed")
+        jobs = ems_bigquery_client.get_failed_jobs("prefixed", datetime.now())
 
         self.assertTrue(len(jobs) == 1)
         self.assertEqual(jobs[0].job_id, "prefixed-some-job-id")
