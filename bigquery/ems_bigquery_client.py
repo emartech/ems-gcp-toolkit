@@ -22,7 +22,7 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
-    def get_job_list(self, min_creation_time: datetime=None, max_creation_time: datetime=None) -> Iterable:
+    def get_job_list(self, min_creation_time: datetime = None, max_creation_time: datetime = None) -> Iterable:
         """
         Args:
             min_creation_time (datetime.datetime, optional):
@@ -38,9 +38,13 @@ class EmsBigqueryClient:
                                                     max_results=20,
                                                     min_creation_time=min_creation_time):
             if isinstance(job, QueryJob):
+                destination = job.destination
+                table_id, dataset_id = (destination.table_id, destination.dataset_id) \
+                    if destination is not None else (None, None)
+
                 config = EmsQueryConfig(job.priority,
-                                        job.destination.dataset_id,
-                                        job.destination.table_id,
+                                        dataset_id,
+                                        table_id,
                                         job.create_disposition,
                                         job.write_disposition)
                 yield EmsQueryJob(job.job_id, job.query,
@@ -53,7 +57,7 @@ class EmsBigqueryClient:
         matched_jobs = filter(lambda x: job_prefix in x.job_id and x.is_failed, jobs)
         return list(matched_jobs)
 
-    def launch_query_job(self, jobs: list, job_prefix: str, retry_limit: int=3):
+    def launch_query_job(self, jobs: list, job_prefix: str, retry_limit: int = 3):
         for job in jobs:
             prefix_with_retry = self.__decorate_with_retry(job.job_id, job_prefix, retry_limit)
             self.run_async_query(job.query, prefix_with_retry, job.query_config)
