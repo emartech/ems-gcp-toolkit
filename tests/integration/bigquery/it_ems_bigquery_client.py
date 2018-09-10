@@ -1,11 +1,13 @@
 import datetime
 import os
+import uuid
 from unittest import TestCase
 
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 from google.cloud.bigquery import Dataset, DatasetReference, Table, TableReference, SchemaField, TimePartitioning
 from google.cloud.exceptions import Conflict
+from tenacity import retry, stop_after_delay
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
@@ -18,6 +20,7 @@ class ItEmsBigqueryClient(TestCase):
     DATASET = None
     GCP_PROJECT_ID = os.environ["GCP_PROJECT_ID"]
     DUMMY_QUERY = "SELECT 1 AS data"
+    BAD_QUERY = "VERY BAD QUERY"
     INSERT_TEMPLATE = "INSERT INTO `{}` (int_data, str_data) VALUES (1, 'hello')"
     SELECT_TEMPLATE = "SELECT * FROM `{}`"
     DUMMY_SELECT_TO_TABLE = "SELECT 1 AS int_data, 'hello' AS str_data"
@@ -101,9 +104,28 @@ class ItEmsBigqueryClient(TestCase):
         found = unique_id in [job.job_id for job in jobs_iterator]
         assert found
 
+    def test_get_failed_jobs(self):
+        job_prefix = "testprefix" + uuid.uuid4().hex
+        id1 = self.client.run_async_query(self.DUMMY_QUERY, job_id_prefix=job_prefix)
+        id2 = self.client.run_async_query(self.BAD_QUERY, job_id_prefix=job_prefix)
+
+        self.__wait_for_job_submitted(id1)
+        self.__wait_for_job_submitted(id2)
+
+        min_creation_time = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
+        failed_jobs = self.client.get_failed_jobs(job_prefix, min_creation_time)
+        failed_job_ids = [job.job_id for job in failed_jobs]
+
+        expected_failed_ids = [id2]
+        self.assertEqual(expected_failed_ids, failed_job_ids)
+
     def test_get_job_list_returnsOnlyQueryJobs(self):
         table_reference = TableReference(self.DATASET, self.table_reference.table_id + "_copy")
         self.GCP_BIGQUERY_CLIENT.copy_table(sources=self.table_reference, destination=table_reference)
+
+    @retry(stop=(stop_after_delay(10)))
+    def __wait_for_job_submitted(self, job_id):
+        self.GCP_BIGQUERY_CLIENT.get_job(job_id).state is not None
 
     def __get_table_path(self):
         return "{}.{}.{}".format(ItEmsBigqueryClient.GCP_PROJECT_ID, ItEmsBigqueryClient.DATASET.dataset_id,
