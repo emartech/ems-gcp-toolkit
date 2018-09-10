@@ -52,17 +52,15 @@ class EmsBigqueryClient:
                                   EmsQueryState(job.state),
                                   job.error_result)
 
-    #TODO get jobs with prefix
-    def get_failed_jobs(self, job_prefix: str, min_creation_time: datetime) -> list:
+    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime) -> list:
         jobs = self.get_job_list(min_creation_time)
-        matched_jobs = filter(lambda x: job_prefix in x.job_id and x.is_failed, jobs)
+        matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
     def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, retry_limit: int = 3):
-        failed_jobs = self.get_failed_jobs(job_prefix, min_creation_time)
-        #TODO filter jobs for failures
+        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time)
+        failed_jobs = [x for x in jobs if x.is_failed]
         self.__launch_query_jobs(failed_jobs, job_prefix, retry_limit)
-
 
     def run_async_query(self,
                         query: str,

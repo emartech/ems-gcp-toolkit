@@ -137,13 +137,13 @@ class TestEmsBigqueryClient(TestCase):
         assert isinstance(result[0].query_config, EmsQueryConfig)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_get_failed_jobs_returnsEmptyIfNoFailedJobFoundWithTheGivenPrefix(self, bigquery_module_patch: bigquery):
+    def test_get_jobs_with_prefix_returnsEmptyIfNoJobFoundWithTheGivenPrefix(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.client_mock.list_jobs.return_value = []
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
         min_creation_time = datetime.now()
-        query_jobs = ems_bigquery_client.get_failed_jobs("prefixed", min_creation_time)
+        query_jobs = ems_bigquery_client.get_jobs_with_prefix("prefixed", min_creation_time)
 
         self.assertEqual(query_jobs, [])
         self.client_mock.list_jobs.assert_called_with(all_users=True,
@@ -151,12 +151,12 @@ class TestEmsBigqueryClient(TestCase):
                                                       min_creation_time=min_creation_time)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_get_failed_jobs_returnsFilteredJobs_ifFailedJobFoundWithSpecificJobIdPrefix(
+    def test_get_jobs_for_prefix_returnsFilteredJobs_ifJobFoundWithSpecificJobIdPrefix(
             self,
             bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        failed_prefixed_query_job_mock = self.__create_query_job_mock("prefixed-some-job-id", True)
-        succeeded_prefixed_query_job_mock = self.__create_query_job_mock("prefixed-some-job-id", False)
+        failed_prefixed_query_job_mock = self.__create_query_job_mock("prefixed-some-job-id1", True)
+        succeeded_prefixed_query_job_mock = self.__create_query_job_mock("prefixed-some-job-id2", False)
         succeeded_non_prefixed_query_job_mock = self.__create_query_job_mock("some-job-id", False)
 
         self.client_mock.list_jobs.return_value = [failed_prefixed_query_job_mock,
@@ -164,14 +164,13 @@ class TestEmsBigqueryClient(TestCase):
                                                    succeeded_non_prefixed_query_job_mock]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        jobs = ems_bigquery_client.get_failed_jobs("prefixed", datetime.now())
+        jobs = ems_bigquery_client.get_jobs_with_prefix("prefixed", datetime.now())
+        job_ids = [job.job_id for job in jobs]
 
-        self.assertTrue(len(jobs) == 1)
-        self.assertEqual(jobs[0].job_id, "prefixed-some-job-id")
-        self.assertTrue(jobs[0].is_failed)
+        self.assertEqual(set(job_ids), {"prefixed-some-job-id1", "prefixed-some-job-id2"})
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_relaunch_query_job_startsQueryJob(self, bigquery_module_patch: bigquery):
+    def test_relaunch_failed_jobs_startsQueryJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         job = self.__create_query_job_mock("prefixed-some-job-id", True)
         self.client_mock.list_jobs.return_value = [job]
@@ -184,22 +183,21 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(arguments["query"], "SIMPLE QUERY")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_relaunch_query_job_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
+    def test_relaunch_failed_jobs_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         first_job = self.__create_query_job_mock("prefixed-some-job-id", True)
-        second_job = self.__create_query_job_mock("prefixed-some-job-id", True)
+        second_job = self.__create_query_job_mock("prefixed-some-job-id", False)
         self.client_mock.list_jobs.return_value = [first_job, second_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
         ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
+        self.client_mock.query.assert_called_once()
         first_call_args = self.client_mock.query.call_args_list[0][1]
         self.assertEqual(first_call_args["job_id_prefix"], "prefixed-retry-1")
-        second_call_args = self.client_mock.query.call_args_list[1][1]
-        self.assertEqual(second_call_args["job_id_prefix"], "prefixed-retry-1")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_relaunch_query_job_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
+    def test_relaunch_failed_jobs_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         first_job = self.__create_query_job_mock("prefixed-retry-1-some-job-id", True)
         self.client_mock.list_jobs.return_value = [first_job]
@@ -211,7 +209,7 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(arguments["job_id_prefix"], "prefixed-retry-2")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_relaunch_query_job_raisesExceptionIfRetryCountExceedsTheGivenLimit(self, bigquery_module_patch: bigquery):
+    def test_relaunch_failed_jobs_raisesExceptionIfRetryCountExceedsTheGivenLimit(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         first_job = self.__create_query_job_mock("prefixed-retry-2-some-job-id", True)
         self.client_mock.list_jobs.return_value = [first_job]
