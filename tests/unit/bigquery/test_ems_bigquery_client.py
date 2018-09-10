@@ -13,6 +13,8 @@ from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededEr
 from bigquery.ems_query_config import EmsQueryConfig
 from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
 
+MIN_CREATION_TIME = datetime(1970, 4, 4)
+
 
 class TestEmsBigqueryClient(TestCase):
     QUERY = "HELLO * BELLO"
@@ -169,27 +171,27 @@ class TestEmsBigqueryClient(TestCase):
         self.assertTrue(jobs[0].is_failed)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_launch_query_job_startsQueryJob(self, bigquery_module_patch: bigquery):
+    def test_relaunch_query_job_startsQueryJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-some-job-id", "SIMPLE QUERY", self.query_config, EmsQueryState.DONE, {})
-        jobs = [job]
+        job = self.__create_query_job_mock("prefixed-some-job-id", True)
+        self.client_mock.list_jobs.return_value = [job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        ems_bigquery_client.launch_query_job(jobs, "prefixed")
+        ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
         arguments = self.client_mock.query.call_args_list[0][1]
         self.assertEqual(arguments["job_id_prefix"], "prefixed-retry-1")
         self.assertEqual(arguments["query"], "SIMPLE QUERY")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_launch_query_job_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
+    def test_relaunch_query_job_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        first_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 1 QUERY", self.query_config, EmsQueryState.DONE, {})
-        second_job = EmsQueryJob("prefixed-some-job-id", "SIMPLE 2 QUERY", self.query_config, EmsQueryState.DONE, {})
-        jobs = [first_job, second_job]
+        first_job = self.__create_query_job_mock("prefixed-some-job-id", True)
+        second_job = self.__create_query_job_mock("prefixed-some-job-id", True)
+        self.client_mock.list_jobs.return_value = [first_job, second_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        ems_bigquery_client.launch_query_job(jobs, "prefixed")
+        ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
         first_call_args = self.client_mock.query.call_args_list[0][1]
         self.assertEqual(first_call_args["job_id_prefix"], "prefixed-retry-1")
@@ -197,31 +199,33 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(second_call_args["job_id_prefix"], "prefixed-retry-1")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_launch_query_job_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
+    def test_relaunch_query_job_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-retry-1-some-job-id", "SIMPLE QUERY", self.query_config, EmsQueryState.DONE, {})
-        jobs = [job]
+        first_job = self.__create_query_job_mock("prefixed-retry-1-some-job-id", True)
+        self.client_mock.list_jobs.return_value = [first_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
-        ems_bigquery_client.launch_query_job(jobs, "prefixed")
+        ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
         arguments = self.client_mock.query.call_args_list[0][1]
         self.assertEqual(arguments["job_id_prefix"], "prefixed-retry-2")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_launch_query_job_raisesExceptionIfRetryCountExceedsTheGivenLimit(self, bigquery_module_patch: bigquery):
+    def test_relaunch_query_job_raisesExceptionIfRetryCountExceedsTheGivenLimit(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        job = EmsQueryJob("prefixed-retry-2-some-job-id", "SIMPLE QUERY", self.query_config, EmsQueryState.DONE, {})
-        jobs = [job]
+        first_job = self.__create_query_job_mock("prefixed-retry-2-some-job-id", True)
+        self.client_mock.list_jobs.return_value = [first_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
 
-        self.assertRaises(RetryLimitExceededError, ems_bigquery_client.launch_query_job(jobs, "prefixed"))
+        self.assertRaises(RetryLimitExceededError,
+                          ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME))
 
     def __create_query_job_mock(self, job_id: str, has_error: bool):
         error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occured'}
         query_job_mock = Mock(QueryJob)
         query_job_mock.job_id = job_id
+        query_job_mock.destination = None
         query_job_mock.query = "SIMPLE QUERY"
         query_job_mock.state = "DONE"
         query_job_mock.error_result = error_result if has_error else None
