@@ -23,6 +23,7 @@ class TestEmsBigqueryClient(TestCase):
     def setUp(self):
         self.client_mock = Mock()
         self.query_job_mock = Mock(QueryJob)
+        self.query_job_mock.priority = "INTERACTIVE"
         self.query_config = EmsQueryConfig(destination_dataset="some_dataset", destination_table="some_table")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
@@ -179,7 +180,7 @@ class TestEmsBigqueryClient(TestCase):
         ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
         arguments = self.client_mock.query.call_args_list[0][1]
-        self.assertEqual(arguments["job_id_prefix"], "prefixed-retry-1")
+        self.assertEqual("prefixed-retry-1-", arguments["job_id_prefix"])
         self.assertEqual(arguments["query"], "SIMPLE QUERY")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
@@ -194,7 +195,7 @@ class TestEmsBigqueryClient(TestCase):
 
         self.client_mock.query.assert_called_once()
         first_call_args = self.client_mock.query.call_args_list[0][1]
-        self.assertEqual(first_call_args["job_id_prefix"], "prefixed-retry-1")
+        self.assertEqual("prefixed-retry-1-", first_call_args["job_id_prefix"])
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_relaunch_failed_jobs_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
@@ -206,10 +207,11 @@ class TestEmsBigqueryClient(TestCase):
         ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
         arguments = self.client_mock.query.call_args_list[0][1]
-        self.assertEqual(arguments["job_id_prefix"], "prefixed-retry-2")
+        self.assertEqual("prefixed-retry-2-", arguments["job_id_prefix"])
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_relaunch_failed_jobs_raisesExceptionIfRetryCountExceedsTheGivenLimit(self, bigquery_module_patch: bigquery):
+    def test_relaunch_failed_jobs_raisesExceptionIfRetryCountExceedsTheGivenLimit(self,
+                                                                                  bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         first_job = self.__create_query_job_mock("prefixed-retry-2-some-job-id", True)
         self.client_mock.list_jobs.return_value = [first_job]
@@ -217,12 +219,13 @@ class TestEmsBigqueryClient(TestCase):
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
 
         self.assertRaises(RetryLimitExceededError,
-                          ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME))
+                          ems_bigquery_client.relaunch_failed_jobs, "prefixed", MIN_CREATION_TIME)
 
     def __create_query_job_mock(self, job_id: str, has_error: bool):
-        error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occured'}
+        error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occurred'}
         query_job_mock = Mock(QueryJob)
         query_job_mock.job_id = job_id
+        query_job_mock.priority = "INTERACTIVE"
         query_job_mock.destination = None
         query_job_mock.query = "SIMPLE QUERY"
         query_job_mock.state = "DONE"

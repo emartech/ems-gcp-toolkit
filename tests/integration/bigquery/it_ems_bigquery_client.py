@@ -121,6 +121,21 @@ class ItEmsBigqueryClient(TestCase):
         expected_ids = [id1, id2]
         self.assertSetEqual(set(expected_ids), set(job_ids))
 
+    def test_relaunch_failed_jobs(self):
+        job_prefix = "testprefix" + uuid.uuid4().hex
+        id1 = self.client.run_async_query(self.DUMMY_QUERY, job_id_prefix=job_prefix)
+        id2 = self.client.run_async_query(self.BAD_QUERY, job_id_prefix=job_prefix)
+        id3 = self.client.run_async_query(self.BAD_QUERY, job_id_prefix="unique_prefix")
+
+        self.__wait_for_job_submitted(id1)
+        self.__wait_for_job_submitted(id2)
+        self.__wait_for_job_submitted(id3)
+
+        min_creation_time = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
+        job_ids = self.client.relaunch_failed_jobs(job_prefix, min_creation_time)
+
+        self.assertRegex(job_ids[0], job_prefix+"-retry-1-.*")
+
     def test_get_job_list_returnsOnlyQueryJobs(self):
         table_reference = TableReference(self.DATASET, self.table_reference.table_id + "_copy")
         self.GCP_BIGQUERY_CLIENT.copy_table(sources=self.table_reference, destination=table_reference)

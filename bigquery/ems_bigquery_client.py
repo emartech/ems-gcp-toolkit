@@ -42,7 +42,7 @@ class EmsBigqueryClient:
                 table_id, dataset_id = (destination.table_id, destination.dataset_id) \
                     if destination is not None else (None, None)
 
-                config = EmsQueryConfig(job.priority,
+                config = EmsQueryConfig(EmsQueryPriority[job.priority],
                                         dataset_id,
                                         table_id,
                                         job.create_disposition,
@@ -57,10 +57,14 @@ class EmsBigqueryClient:
         matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
-    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, retry_limit: int = 3):
+    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_attempts: int = 3) -> list:
+        def launch(job: EmsQueryJob) -> str:
+            prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, max_attempts)
+            return self.run_async_query(job.query, prefix_with_retry, job.query_config)
+
         jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time)
         failed_jobs = [x for x in jobs if x.is_failed]
-        self.__launch_query_jobs(failed_jobs, job_prefix, retry_limit)
+        return [launch(job) for job in failed_jobs]
 
     def run_async_query(self,
                         query: str,
@@ -75,7 +79,6 @@ class EmsBigqueryClient:
                        query: str,
                        ems_query_config: EmsQueryConfig = EmsQueryConfig(priority=EmsQueryPriority.INTERACTIVE)
                        ) -> Iterable:
-
         logger.info("Sync query executed with priority: %s", ems_query_config.priority)
         try:
             return self.__get_mapped_iterator(
@@ -89,16 +92,11 @@ class EmsBigqueryClient:
         retry_counter = 0
         if RETRY in job_id:
             retry_counter = self.__get_retry_counter(job_id, job_prefix)
-        prefix_with_retry = job_prefix + RETRY + str(retry_counter + 1)
+        prefix_with_retry = job_prefix + RETRY + str(retry_counter + 1) + "-"
 
-        if retry_counter >= retry_limit:
+        if retry_counter >= retry_limit - 1:
             raise RetryLimitExceededError()
         return prefix_with_retry
-
-    def __launch_query_jobs(self, jobs: list, job_prefix: str, retry_limit: int = 3):
-        for job in jobs:
-            prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, retry_limit)
-            self.run_async_query(job.query, prefix_with_retry, job.query_config)
 
     def __get_retry_counter(self, job_id, job_id_prefix):
         return int(job_id[len(job_id_prefix) + len(RETRY)])
