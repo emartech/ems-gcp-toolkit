@@ -22,20 +22,19 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
-    def get_job_list(self, min_creation_time: datetime = None) -> Iterable:
+    def get_job_list(self, min_creation_time: datetime = None, max_result: int = 20) -> Iterable:
         """
         Args:
             min_creation_time (datetime.datetime, optional):
                 If set, only jobs created after or at this timestamp are returned.
                 If the datetime has no time zone assumes UTC time.
-            max_creation_time (datetime.datetime, optional):
-                If set, only jobs created before or at this timestamp are returned.
-                If the datetime has no time zone assumes UTC time.
+            max_result (int, optional):
+                Maximum number of jobs to return.
         Yields:
             EmsQueryJob: the next job
         """
         for job in self.__bigquery_client.list_jobs(all_users=True,
-                                                    max_results=20,
+                                                    max_results=max_result,
                                                     min_creation_time=min_creation_time):
             if isinstance(job, QueryJob):
                 destination = job.destination

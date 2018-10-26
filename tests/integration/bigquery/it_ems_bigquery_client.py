@@ -104,6 +104,12 @@ class ItEmsBigqueryClient(TestCase):
         found = unique_id in [job.job_id for job in jobs_iterator]
         assert found
 
+    def test_run_get_job_list_returns2JobsIfMaxResultSetTo2(self):
+        for i in range(1,3):
+            self.client.run_async_query(self.DUMMY_QUERY)
+        jobs_iterator = self.client.get_job_list(max_result=2)
+        assert 2 == len(list(jobs_iterator))
+
     def test_get_jobs_with_prefix(self):
         job_prefix = "testprefix" + uuid.uuid4().hex
         id1 = self.client.run_async_query(self.DUMMY_QUERY, job_id_prefix=job_prefix)
