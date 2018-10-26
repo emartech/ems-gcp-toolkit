@@ -51,8 +51,8 @@ class EmsBigqueryClient:
                                   EmsQueryState(job.state),
                                   job.error_result)
 
-    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime) -> list:
-        jobs = self.get_job_list(min_creation_time)
+    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:
+        jobs = self.get_job_list(min_creation_time, max_result)
         matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
