@@ -113,9 +113,8 @@ class EmsBigqueryClient:
         if ems_query_config.destination_table is not None:
             job_config.time_partitioning = TimePartitioning("DAY")
             table_reference = TableReference(
-                DatasetReference(
-                    self.__project_id,
-                    ems_query_config.destination_dataset),
+                DatasetReference(ems_query_config.destination_project_id or self.__project_id,
+                                 ems_query_config.destination_dataset),
                 ems_query_config.destination_table)
             job_config.destination = table_reference
             job_config.write_disposition = ems_query_config.write_disposition.value

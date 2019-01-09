@@ -24,21 +24,37 @@ class TestEmsBigqueryClient(TestCase):
         self.client_mock = Mock()
         self.query_job_mock = Mock(QueryJob)
         self.query_job_mock.priority = "INTERACTIVE"
-        self.query_config = EmsQueryConfig(destination_dataset="some_dataset", destination_table="some_table")
+        self.query_config = EmsQueryConfig(destination_project_id="some_destination_project_id",
+                                           destination_dataset="some_dataset",
+                                           destination_table="some_table")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
 
-        result_job_id = ems_bigquery_client.run_async_query(self.QUERY)
+        result_job_id = ems_bigquery_client.run_async_query(self.QUERY, ems_query_config=self.query_config)
 
         bigquery_module_patch.Client.assert_called_once_with("some-project-id")
         arguments = self.client_mock.query.call_args_list[0][1]
-        assert self.QUERY == arguments["query"]
+        assert arguments["query"] == self.QUERY
         assert arguments["location"] == "EU"
-        assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
+        assert arguments["job_config"].priority == QueryPriority.INTERACTIVE
+        self.assertEqual(arguments["job_config"].destination.project, "some_destination_project_id")
         assert arguments["job_id_prefix"] is None
         assert result_job_id == "some-job-id"
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_run_async_query_setsDestinationProjectIdToDefaultIfNotGiven(self, bigquery_module_patch: bigquery):
+        ems_bigquery_client = self.__setup_client(bigquery_module_patch)
+        query_config = EmsQueryConfig(destination_project_id=None,
+                                      destination_dataset="some_dataset",
+                                      destination_table="some_table")
+
+        ems_bigquery_client.run_async_query(self.QUERY, ems_query_config=query_config)
+
+        bigquery_module_patch.Client.assert_called_once_with("some-project-id")
+        arguments = self.client_mock.query.call_args_list[0][1]
+        self.assertEqual(arguments["job_config"].destination.project, "some-project-id")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_usesCustomLocation(self, bigquery_module_patch: bigquery):

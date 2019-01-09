@@ -7,10 +7,14 @@ class TestEmsQueryConfig(TestCase):
 
     def setUp(self):
         self.ems_query_config = EmsQueryConfig(priority=EmsQueryPriority.INTERACTIVE,
+                                               destination_project_id = "test_project",
                                                destination_dataset="test_dataset",
                                                destination_table="test_table",
                                                create_disposition=EmsCreateDisposition.CREATE_IF_NEEDED,
                                                write_disposition=EmsWriteDisposition.WRITE_APPEND)
+
+    def test_destination_project_id(self):
+        self.assertEqual(self.ems_query_config.destination_project_id, "test_project")
 
     def test_destination_dataset(self):
         self.assertEqual(self.ems_query_config.destination_dataset, "test_dataset")
