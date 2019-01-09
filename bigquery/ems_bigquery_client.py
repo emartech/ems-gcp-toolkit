@@ -38,10 +38,12 @@ class EmsBigqueryClient:
                                                     min_creation_time=min_creation_time):
             if isinstance(job, QueryJob):
                 destination = job.destination
-                table_id, dataset_id = (destination.table_id, destination.dataset_id) \
-                    if destination is not None else (None, None)
+                table_id, dataset_id, project_id =\
+                    (destination.table_id, destination.dataset_id, destination.project)\
+                        if destination is not None else (None, None, None)
 
                 config = EmsQueryConfig(EmsQueryPriority[job.priority],
+                                        project_id,
                                         dataset_id,
                                         table_id,
                                         job.create_disposition,
