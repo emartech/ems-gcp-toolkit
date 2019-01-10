@@ -1,7 +1,8 @@
 from unittest import TestCase
 
 from bigquery.ems_job_config import EmsJobConfig
-from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
+from bigquery.ems_job_state import EmsJobState
+from bigquery.ems_query_job import EmsQueryJob
 
 
 class TestEmsQueryJob(TestCase):
@@ -9,10 +10,10 @@ class TestEmsQueryJob(TestCase):
     def setUp(self):
         self.query_config = EmsJobConfig()
         error_result = {"some": "error", "happened": "here"}
-        self.ems_query_job = EmsQueryJob("test-job-id", "query", self.query_config, EmsQueryState.DONE, error_result)
+        self.ems_query_job = EmsQueryJob("test-job-id", "query", self.query_config, EmsJobState.DONE, error_result)
 
     def test_state(self):
-        self.assertEqual(self.ems_query_job.state, EmsQueryState.DONE)
+        self.assertEqual(self.ems_query_job.state, EmsJobState.DONE)
 
     def test_job_id(self):
         self.assertEqual(self.ems_query_job.job_id, "test-job-id")
@@ -24,6 +25,6 @@ class TestEmsQueryJob(TestCase):
         self.assertTrue(self.ems_query_job.is_failed)
 
     def test_is_not_failed(self):
-        not_failed_ems_query_job = EmsQueryJob("test-job-id", "query", self.query_config, EmsQueryState.DONE, None)
+        not_failed_ems_query_job = EmsQueryJob("test-job-id", "query", self.query_config, EmsJobState.DONE, None)
 
         self.assertFalse(not_failed_ems_query_job.is_failed)

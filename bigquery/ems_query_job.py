@@ -1,13 +1,7 @@
-from enum import Enum
 from typing import Union
 
 from bigquery.ems_job_config import EmsJobConfig
-
-
-class EmsQueryState(Enum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    DONE = "DONE"
+from bigquery.ems_job_state import EmsJobState
 
 
 class EmsQueryJob:
@@ -15,7 +9,7 @@ class EmsQueryJob:
                  job_id: str,
                  query: str,
                  query_config: EmsJobConfig,
-                 state: EmsQueryState,
+                 state: EmsJobState,
                  error_result: Union[dict, None]):
         self.__job_id = job_id
         self.__query = query
@@ -28,7 +22,7 @@ class EmsQueryJob:
         return self.__query_config
 
     @property
-    def state(self) -> EmsQueryState:
+    def state(self) -> EmsJobState:
         return self.__state
 
     @property

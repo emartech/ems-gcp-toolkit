@@ -11,7 +11,8 @@ from google.cloud.bigquery.table import Row, TableReference
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
 from bigquery.ems_job_config import EmsJobConfig
-from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
+from bigquery.ems_job_state import EmsJobState
+from bigquery.ems_query_job import EmsQueryJob
 
 MIN_CREATION_TIME = datetime(1970, 4, 4)
 
@@ -147,7 +148,7 @@ class TestEmsBigqueryClient(TestCase):
         result = list(job_list_iterable)
         assert len(result) == 1
         assert isinstance(result[0], EmsQueryJob)
-        assert result[0].state == EmsQueryState("DONE")
+        assert result[0].state == EmsJobState("DONE")
         assert result[0].job_id == "123"
         assert result[0].query == "SELECT 1"
         assert result[0].is_failed is False

@@ -8,7 +8,9 @@ from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, Data
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_job_config import EmsJobConfig, EmsJobPriority
 import logging
-from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
+
+from bigquery.ems_job_state import EmsJobState
+from bigquery.ems_query_job import EmsQueryJob
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ class EmsBigqueryClient:
                                       job.write_disposition)
                 yield EmsQueryJob(job.job_id, job.query,
                                   config,
-                                  EmsQueryState(job.state),
+                                  EmsJobState(job.state),
                                   job.error_result)
 
     def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:
