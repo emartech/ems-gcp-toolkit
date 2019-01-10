@@ -1,14 +1,14 @@
 from unittest import TestCase
 
-from bigquery.ems_job_config import EmsJobConfig
 from bigquery.ems_job_state import EmsJobState
 from bigquery.ems_load_job import EmsLoadJob
+from bigquery.ems_load_job_config import EmsLoadJobConfig
 
 
 class TestEmsLoadJob(TestCase):
 
     def setUp(self):
-        self.load_config = EmsJobConfig()
+        self.load_config = EmsLoadJobConfig()
         error_result = {"some": "error", "happened": "here"}
         self.ems_load_job = EmsLoadJob("test-job-id", self.load_config, EmsJobState.DONE, error_result)
 

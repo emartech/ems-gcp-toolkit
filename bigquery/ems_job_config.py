@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 
 
@@ -17,8 +18,9 @@ class EmsJobPriority(Enum):
     BATCH = "BATCH"
 
 
-class EmsJobConfig:
+class EmsJobConfig(ABC):
 
+    @abstractmethod
     def __init__(self,
                  priority: EmsJobPriority = EmsJobPriority.INTERACTIVE,
                  destination_project_id: str = None,

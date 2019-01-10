@@ -1,13 +1,13 @@
 from typing import Union
 
-from bigquery.ems_job_config import EmsJobConfig
 from bigquery.ems_job_state import EmsJobState
+from bigquery.ems_load_job_config import EmsLoadJobConfig
 
 
 class EmsLoadJob:
     def __init__(self,
                  job_id: str,
-                 load_config: EmsJobConfig,
+                 load_config: EmsLoadJobConfig,
                  state: EmsJobState,
                  error_result: Union[dict, None]):
         self.__job_id = job_id
@@ -16,7 +16,7 @@ class EmsLoadJob:
         self.__error_result = error_result
 
     @property
-    def load_config(self) -> EmsJobConfig:
+    def load_config(self) -> EmsLoadJobConfig:
         return self.__load_config
 
     @property

@@ -1,3 +1,4 @@
+import logging
 from collections import Iterable
 from datetime import datetime
 
@@ -6,11 +7,10 @@ from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning
 
 from bigquery.ems_api_error import EmsApiError
-from bigquery.ems_job_config import EmsJobConfig, EmsJobPriority
-import logging
-
+from bigquery.ems_job_config import EmsJobPriority
 from bigquery.ems_job_state import EmsJobState
 from bigquery.ems_query_job import EmsQueryJob
+from bigquery.ems_query_job_config import EmsQueryJobConfig
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,6 @@ RETRY = "-retry-"
 
 
 class EmsBigqueryClient:
-
     def __init__(self, project_id: str, location: str = "EU"):
         self.__project_id = project_id
         self.__bigquery_client = bigquery.Client(project_id)
@@ -44,12 +43,12 @@ class EmsBigqueryClient:
                     (destination.table_id, destination.dataset_id, destination.project) \
                         if destination is not None else (None, None, None)
 
-                config = EmsJobConfig(EmsJobPriority[job.priority],
-                                      project_id,
-                                      dataset_id,
-                                      table_id,
-                                      job.create_disposition,
-                                      job.write_disposition)
+                config = EmsQueryJobConfig(EmsJobPriority[job.priority],
+                                           project_id,
+                                           dataset_id,
+                                           table_id,
+                                           job.create_disposition,
+                                           job.write_disposition)
                 yield EmsQueryJob(job.job_id, job.query,
                                   config,
                                   EmsJobState(job.state),
@@ -72,21 +71,21 @@ class EmsBigqueryClient:
     def run_async_query(self,
                         query: str,
                         job_id_prefix: str = None,
-                        ems_job_config: EmsJobConfig = EmsJobConfig(
+                        ems_query_job_config: EmsQueryJobConfig = EmsQueryJobConfig(
                             priority=EmsJobPriority.INTERACTIVE)) -> str:
         return self.__execute_query_job(query=query,
-                                        ems_job_config=ems_job_config,
+                                        ems_query_job_config=ems_query_job_config,
                                         job_id_prefix=job_id_prefix).job_id
 
     def run_sync_query(self,
                        query: str,
-                       ems_job_config: EmsJobConfig = EmsJobConfig(priority=EmsJobPriority.INTERACTIVE)
+                       ems_query_job_config: EmsQueryJobConfig = EmsQueryJobConfig(priority=EmsJobPriority.INTERACTIVE)
                        ) -> Iterable:
-        logger.info("Sync query executed with priority: %s", ems_job_config.priority)
+        logger.info("Sync query executed with priority: %s", ems_query_job_config.priority)
         try:
             return self.__get_mapped_iterator(
                 self.__execute_query_job(query=query,
-                                         ems_job_config=ems_job_config).result()
+                                         ems_query_job_config=ems_query_job_config).result()
             )
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query | {} |: {}!".format(query, e.args[0]))
@@ -104,25 +103,25 @@ class EmsBigqueryClient:
     def __get_retry_counter(self, job_id, job_id_prefix):
         return int(job_id[len(job_id_prefix) + len(RETRY)])
 
-    def __execute_query_job(self, query: str, ems_job_config: EmsJobConfig, job_id_prefix=None) -> QueryJob:
+    def __execute_query_job(self, query: str, ems_query_job_config: EmsQueryJobConfig, job_id_prefix=None) -> QueryJob:
         return self.__bigquery_client.query(query=query,
-                                            job_config=(self.__create_job_config(ems_job_config)),
+                                            job_config=(self.__create_job_config(ems_query_job_config)),
                                             job_id_prefix=job_id_prefix,
                                             location=self.__location)
 
-    def __create_job_config(self, ems_job_config: EmsJobConfig) -> QueryJobConfig:
+    def __create_job_config(self, ems_query_job_config: EmsQueryJobConfig) -> QueryJobConfig:
         job_config = QueryJobConfig()
-        job_config.priority = ems_job_config.priority.value
+        job_config.priority = ems_query_job_config.priority.value
         job_config.use_legacy_sql = False
-        if ems_job_config.destination_table is not None:
+        if ems_query_job_config.destination_table is not None:
             job_config.time_partitioning = TimePartitioning("DAY")
             table_reference = TableReference(
-                DatasetReference(ems_job_config.destination_project_id or self.__project_id,
-                                 ems_job_config.destination_dataset),
-                ems_job_config.destination_table)
+                DatasetReference(ems_query_job_config.destination_project_id or self.__project_id,
+                                 ems_query_job_config.destination_dataset),
+                ems_query_job_config.destination_table)
             job_config.destination = table_reference
-            job_config.write_disposition = ems_job_config.write_disposition.value
-            job_config.create_disposition = ems_job_config.create_disposition.value
+            job_config.write_disposition = ems_query_job_config.write_disposition.value
+            job_config.create_disposition = ems_query_job_config.create_disposition.value
         return job_config
 
     @staticmethod

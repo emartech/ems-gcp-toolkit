@@ -11,7 +11,7 @@ from tenacity import retry, stop_after_delay
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
-from bigquery.ems_job_config import EmsJobConfig
+from bigquery.ems_query_job_config import EmsQueryJobConfig
 
 
 class ItEmsBigqueryClient(TestCase):
@@ -80,12 +80,12 @@ class ItEmsBigqueryClient(TestCase):
         assert [{"int_data": 1, "str_data": "hello"}] == list(query_result)
 
     def test_run_sync_query_withDestinationSet(self):
-        ems_job_config = EmsJobConfig(
+        ems_query_job_config = EmsQueryJobConfig(
             destination_dataset=ItEmsBigqueryClient.DATASET.dataset_id,
             destination_table=self.test_table.table_id
         )
         query_with_destination_result = list(self.client.run_sync_query(self.DUMMY_SELECT_TO_TABLE,
-                                                                        ems_job_config=ems_job_config))
+                                                                        ems_query_job_config=ems_query_job_config))
         query_result = list(self.client.run_sync_query(self.SELECT_TEMPLATE.format(self.__get_table_path())))
 
         assert [{"int_data": 1, "str_data": "hello"}] == query_result
