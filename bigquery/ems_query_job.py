@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Union
 
-from bigquery.ems_query_config import EmsQueryConfig
+from bigquery.ems_job_config import EmsJobConfig
 
 
 class EmsQueryState(Enum):
@@ -14,7 +14,7 @@ class EmsQueryJob:
     def __init__(self,
                  job_id: str,
                  query: str,
-                 query_config: EmsQueryConfig,
+                 query_config: EmsJobConfig,
                  state: EmsQueryState,
                  error_result: Union[dict, None]):
         self.__job_id = job_id
@@ -24,7 +24,7 @@ class EmsQueryJob:
         self.__error_result = error_result
 
     @property
-    def query_config(self) -> EmsQueryConfig:
+    def query_config(self) -> EmsJobConfig:
         return self.__query_config
 
     @property

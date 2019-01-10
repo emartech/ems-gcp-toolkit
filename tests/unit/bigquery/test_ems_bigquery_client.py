@@ -10,7 +10,7 @@ from google.cloud.bigquery.table import Row, TableReference
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
-from bigquery.ems_query_config import EmsQueryConfig
+from bigquery.ems_job_config import EmsJobConfig
 from bigquery.ems_query_job import EmsQueryJob, EmsQueryState
 
 MIN_CREATION_TIME = datetime(1970, 4, 4)
@@ -24,15 +24,15 @@ class TestEmsBigqueryClient(TestCase):
         self.client_mock = Mock()
         self.query_job_mock = Mock(QueryJob)
         self.query_job_mock.priority = "INTERACTIVE"
-        self.query_config = EmsQueryConfig(destination_project_id="some_destination_project_id",
-                                           destination_dataset="some_dataset",
-                                           destination_table="some_table")
+        self.query_config = EmsJobConfig(destination_project_id="some_destination_project_id",
+                                         destination_dataset="some_dataset",
+                                         destination_table="some_table")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
 
-        result_job_id = ems_bigquery_client.run_async_query(self.QUERY, ems_query_config=self.query_config)
+        result_job_id = ems_bigquery_client.run_async_query(self.QUERY, ems_job_config=self.query_config)
 
         bigquery_module_patch.Client.assert_called_once_with("some-project-id")
         arguments = self.client_mock.query.call_args_list[0][1]
@@ -46,11 +46,11 @@ class TestEmsBigqueryClient(TestCase):
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_setsDestinationProjectIdToDefaultIfNotGiven(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
-        query_config = EmsQueryConfig(destination_project_id=None,
-                                      destination_dataset="some_dataset",
-                                      destination_table="some_table")
+        query_config = EmsJobConfig(destination_project_id=None,
+                                    destination_dataset="some_dataset",
+                                    destination_table="some_table")
 
-        ems_bigquery_client.run_async_query(self.QUERY, ems_query_config=query_config)
+        ems_bigquery_client.run_async_query(self.QUERY, ems_job_config=query_config)
 
         bigquery_module_patch.Client.assert_called_once_with("some-project-id")
         arguments = self.client_mock.query.call_args_list[0][1]
@@ -151,10 +151,10 @@ class TestEmsBigqueryClient(TestCase):
         assert result[0].job_id == "123"
         assert result[0].query == "SELECT 1"
         assert result[0].is_failed is False
-        assert isinstance(result[0].query_config, EmsQueryConfig)
+        assert isinstance(result[0].query_config, EmsJobConfig)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_get_job_list_returnsJobWithEmsQueryConfigWithoutDestination(self, bigquery_module_patch: bigquery):
+    def test_get_job_list_returnsJobWithEmsJobConfigWithoutDestination(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
         self.query_job_mock.query = "SELECT 1"
@@ -171,7 +171,7 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(result[0].query_config.destination_table, None)
 
     @patch("bigquery.ems_bigquery_client.bigquery")
-    def test_get_job_list_returnsJobWithEmsQueryConfigWithSetDestination(self, bigquery_module_patch: bigquery):
+    def test_get_job_list_returnsJobWithEmsJobConfigWithSetDestination(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
         self.query_job_mock.query = "SELECT 1"

@@ -11,7 +11,7 @@ from tenacity import retry, stop_after_delay
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
-from bigquery.ems_query_config import EmsQueryConfig
+from bigquery.ems_job_config import EmsJobConfig
 
 
 class ItEmsBigqueryClient(TestCase):
@@ -80,12 +80,12 @@ class ItEmsBigqueryClient(TestCase):
         assert [{"int_data": 1, "str_data": "hello"}] == list(query_result)
 
     def test_run_sync_query_withDestinationSet(self):
-        ems_query_config = EmsQueryConfig(
+        ems_job_config = EmsJobConfig(
             destination_dataset=ItEmsBigqueryClient.DATASET.dataset_id,
             destination_table=self.test_table.table_id
         )
         query_with_destination_result = list(self.client.run_sync_query(self.DUMMY_SELECT_TO_TABLE,
-                                                                        ems_query_config=ems_query_config))
+                                                                        ems_job_config=ems_job_config))
         query_result = list(self.client.run_sync_query(self.SELECT_TEMPLATE.format(self.__get_table_path())))
 
         assert [{"int_data": 1, "str_data": "hello"}] == query_result
@@ -105,7 +105,7 @@ class ItEmsBigqueryClient(TestCase):
         assert found
 
     def test_run_get_job_list_returns2JobsIfMaxResultSetTo2(self):
-        for i in range(1,3):
+        for i in range(1, 3):
             self.client.run_async_query(self.DUMMY_QUERY)
         jobs_iterator = self.client.get_job_list(max_result=2)
         assert 2 == len(list(jobs_iterator))
@@ -140,7 +140,7 @@ class ItEmsBigqueryClient(TestCase):
         min_creation_time = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
         job_ids = self.client.relaunch_failed_jobs(job_prefix, min_creation_time)
 
-        self.assertRegex(job_ids[0], job_prefix+"-retry-1-.*")
+        self.assertRegex(job_ids[0], job_prefix + "-retry-1-.*")
 
     def test_get_job_list_returnsOnlyQueryJobs(self):
         table_reference = TableReference(self.DATASET, self.table_reference.table_id + "_copy")

@@ -12,15 +12,15 @@ class EmsCreateDisposition(Enum):
     CREATE_NEVER = "CREATE_NEVER"
 
 
-class EmsQueryPriority(Enum):
+class EmsJobPriority(Enum):
     INTERACTIVE = "INTERACTIVE"
     BATCH = "BATCH"
 
 
-class EmsQueryConfig:
+class EmsJobConfig:
 
     def __init__(self,
-                 priority: EmsQueryPriority = EmsQueryPriority.INTERACTIVE,
+                 priority: EmsJobPriority = EmsJobPriority.INTERACTIVE,
                  destination_project_id: str = None,
                  destination_dataset: str = None,
                  destination_table: str = None,
