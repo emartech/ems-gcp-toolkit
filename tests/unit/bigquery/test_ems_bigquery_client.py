@@ -6,7 +6,7 @@ from unittest.mock import patch, Mock
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJob, QueryPriority
-from google.cloud.bigquery.table import Row
+from google.cloud.bigquery.table import Row, TableReference
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
@@ -152,6 +152,44 @@ class TestEmsBigqueryClient(TestCase):
         assert result[0].query == "SELECT 1"
         assert result[0].is_failed is False
         assert isinstance(result[0].query_config, EmsQueryConfig)
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_get_job_list_returnsJobWithEmsQueryConfigWithoutDestination(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        self.query_job_mock.job_id = "123"
+        self.query_job_mock.query = "SELECT 1"
+        self.query_job_mock.state = "DONE"
+        self.query_job_mock.destination = None
+        self.client_mock.list_jobs.return_value = [self.query_job_mock]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        job_list_iterable = ems_bigquery_client.get_job_list()
+
+        result = list(job_list_iterable)
+        self.assertEqual(result[0].query_config.destination_project_id, None)
+        self.assertEqual(result[0].query_config.destination_dataset, None)
+        self.assertEqual(result[0].query_config.destination_table, None)
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_get_job_list_returnsJobWithEmsQueryConfigWithSetDestination(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        self.query_job_mock.job_id = "123"
+        self.query_job_mock.query = "SELECT 1"
+        self.query_job_mock.state = "DONE"
+        destination = Mock(TableReference)
+        self.query_job_mock.destination = destination
+        destination.project = "some-other-project-id"
+        destination.dataset_id = "some-destination-dataset"
+        destination.table_id = "some-destination-table"
+        self.client_mock.list_jobs.return_value = [self.query_job_mock]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        job_list_iterable = ems_bigquery_client.get_job_list()
+
+        result = list(job_list_iterable)
+        self.assertEqual(result[0].query_config.destination_project_id, "some-other-project-id")
+        self.assertEqual(result[0].query_config.destination_dataset, "some-destination-dataset")
+        self.assertEqual(result[0].query_config.destination_table, "some-destination-table")
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_jobs_with_prefix_returnsEmptyIfNoJobFoundWithTheGivenPrefix(self, bigquery_module_patch: bigquery):
