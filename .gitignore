@@ -2,3 +2,5 @@
 /dist
 /ems_gcp_toolkit.egg-info
 **/__pycache__
+*.pyc
+/venv
