@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="ems-gcp-toolkit",
     version="0.1.6",
-    packages=["bigquery", "job", "config"],
+    packages=find_packages(exclude="tests"),
     url="https://github.com/emartech/ems-gcp-toolkit",
     license="MIT",
     author="Emarsys",
