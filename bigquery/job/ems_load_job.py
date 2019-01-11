@@ -1,25 +1,23 @@
 from typing import Union
 
-from bigquery.ems_job_state import EmsJobState
-from bigquery.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
+from bigquery.job.ems_job_state import EmsJobState
 
 
-class EmsQueryJob:
+class EmsLoadJob:
     def __init__(self,
                  job_id: str,
-                 query: str,
-                 query_config: EmsQueryJobConfig,
+                 load_config: EmsLoadJobConfig,
                  state: EmsJobState,
                  error_result: Union[dict, None]):
         self.__job_id = job_id
-        self.__query = query
-        self.__query_config = query_config
+        self.__load_config = load_config
         self.__state = state
         self.__error_result = error_result
 
     @property
-    def query_config(self) -> EmsQueryJobConfig:
-        return self.__query_config
+    def load_config(self) -> EmsLoadJobConfig:
+        return self.__load_config
 
     @property
     def state(self) -> EmsJobState:
@@ -32,7 +30,3 @@ class EmsQueryJob:
     @property
     def is_failed(self) -> bool:
         return self.__error_result is not None
-
-    @property
-    def query(self) -> str:
-        return self.__query

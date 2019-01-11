@@ -11,7 +11,7 @@ from tenacity import retry, stop_after_delay
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
-from bigquery.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 
 
 class ItEmsBigqueryClient(TestCase):

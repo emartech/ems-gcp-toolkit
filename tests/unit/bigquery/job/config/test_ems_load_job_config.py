@@ -1,7 +1,8 @@
 from unittest import TestCase
 
-from bigquery.ems_job_config import EmsJobPriority, EmsCreateDisposition, EmsWriteDisposition
-from bigquery.ems_load_job_config import EmsLoadJobConfig
+from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
+
+from bigquery.job.config.ems_job_config import EmsJobPriority, EmsCreateDisposition, EmsWriteDisposition
 
 
 class TestEmsLoadJobConfig(TestCase):

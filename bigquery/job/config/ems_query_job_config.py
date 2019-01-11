@@ -1,4 +1,4 @@
-from bigquery.ems_job_config import EmsJobConfig
+from bigquery.job.config.ems_job_config import EmsJobConfig
 
 
 class EmsQueryJobConfig(EmsJobConfig):

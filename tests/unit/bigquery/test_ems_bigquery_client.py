@@ -10,9 +10,9 @@ from google.cloud.bigquery.table import Row, TableReference
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
-from bigquery.ems_job_state import EmsJobState
-from bigquery.ems_query_job import EmsQueryJob
-from bigquery.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.ems_job_state import EmsJobState
+from bigquery.job.ems_query_job import EmsQueryJob
 
 MIN_CREATION_TIME = datetime(1970, 4, 4)
 

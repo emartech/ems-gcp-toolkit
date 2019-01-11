@@ -1,8 +1,8 @@
 from unittest import TestCase
 
-from bigquery.ems_job_state import EmsJobState
-from bigquery.ems_query_job import EmsQueryJob
-from bigquery.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.ems_job_state import EmsJobState
+from bigquery.job.ems_query_job import EmsQueryJob
 
 
 class TestEmsQueryJob(TestCase):
