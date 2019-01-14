@@ -1,6 +1,7 @@
 from google.cloud.pubsub_v1 import SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message
 
+from pubsub.ems_streaming_future import EmsStreamingFuture
 from pubsub.ems_message import EmsMessage
 
 
@@ -17,4 +18,4 @@ class EmsSubscriberClient:
             callback=callback_wrapper
         )
 
-        return future
+        return EmsStreamingFuture(future)
