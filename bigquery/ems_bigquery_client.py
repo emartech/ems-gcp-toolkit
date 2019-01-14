@@ -2,12 +2,16 @@ import logging
 from collections import Iterable
 from datetime import datetime
 
+from google.cloud.bigquery.schema import _parse_schema_resource
+
 from bigquery.job.config.ems_job_config import EmsJobPriority
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning
+from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
+    LoadJobConfig
 
 from bigquery.ems_api_error import EmsApiError
+from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_query_job import EmsQueryJob
@@ -77,6 +81,16 @@ class EmsBigqueryClient:
                                         ems_query_job_config=ems_query_job_config,
                                         job_id_prefix=job_id_prefix).job_id
 
+    def run_async_load_job(self, source_uri: str, job_id_prefix: str, config: EmsLoadJobConfig) -> str:
+        return self.__bigquery_client.load_table_from_uri(source_uris=source_uri,
+                                                          destination=TableReference(
+                                                              DatasetReference(config.destination_project_id,
+                                                                               config.destination_dataset),
+                                                              config.destination_table),
+                                                          job_id_prefix=job_id_prefix,
+                                                          location=self.__location,
+                                                          job_config=self.__create_load_job_config(config)).job_id
+
     def run_sync_query(self,
                        query: str,
                        ems_query_job_config: EmsQueryJobConfig = EmsQueryJobConfig(priority=EmsJobPriority.INTERACTIVE)
@@ -108,6 +122,13 @@ class EmsBigqueryClient:
                                             job_config=(self.__create_job_config(ems_query_job_config)),
                                             job_id_prefix=job_id_prefix,
                                             location=self.__location)
+
+    def __create_load_job_config(self, ems_load_job_config: EmsLoadJobConfig) -> LoadJobConfig:
+        config = LoadJobConfig()
+        config.create_disposition = ems_load_job_config.create_disposition.value
+        config.write_disposition = ems_load_job_config.write_disposition.value
+        config.schema = _parse_schema_resource(ems_load_job_config.schema)
+        return config
 
     def __create_job_config(self, ems_query_job_config: EmsQueryJobConfig) -> QueryJobConfig:
         job_config = QueryJobConfig()

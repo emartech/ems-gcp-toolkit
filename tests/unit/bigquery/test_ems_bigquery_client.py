@@ -5,11 +5,13 @@ from unittest.mock import patch, Mock
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJob, QueryPriority
+from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField
 from google.cloud.bigquery.table import Row, TableReference
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
+from bigquery.job.config.ems_job_config import EmsCreateDisposition, EmsWriteDisposition
+from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_query_job import EmsQueryJob
@@ -78,6 +80,37 @@ class TestEmsBigqueryClient(TestCase):
         arguments = self.client_mock.query.call_args_list[0][1]
         assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
         assert test_job_id_prefix == arguments["job_id_prefix"]
+
+    @patch("bigquery.ems_bigquery_client.bigquery")
+    def test_run_async_load_job_submitsLoadJobAndReturnsJobIdWithProperConfig(self, bigquery_module_patch: bigquery):
+        project_id = "some-project-id"
+        source_uri = "gs://some-source-uri/to_object"
+        bigquery_module_patch.Client.return_value = self.client_mock
+        input_json_schema = {
+            "fields": [{"type": "STRING", "name": "f1"}, {"mode": "REQUIRED", "type": "INTEGER", "name": "f2"}]}
+        load_job_config = EmsLoadJobConfig(destination_project_id="some-destination-project-id",
+                                           destination_dataset="some-destination-dataset",
+                                           destination_table="some-destination-table",
+                                           schema=input_json_schema)
+        self.load_job_mock = Mock(LoadJob)
+        self.load_job_mock.job_id = self.JOB_ID
+        self.client_mock.load_table_from_uri.return_value = self.load_job_mock
+
+        ems_bigquery_client = EmsBigqueryClient(project_id)
+        result_job_id = ems_bigquery_client.run_async_load_job(source_uri, "prefix", load_job_config)
+
+        arguments = self.client_mock.load_table_from_uri.call_args_list[0][1]
+        self.assertEqual(arguments["source_uris"], source_uri)
+        self.assertEqual(arguments["job_id_prefix"], "prefix")
+        self.assertEqual(result_job_id, "some-job-id")
+        job_config = arguments["job_config"]
+        self.assertIsInstance(job_config, LoadJobConfig)
+        self.assertEqual(job_config.create_disposition, EmsCreateDisposition.CREATE_IF_NEEDED.value)
+        self.assertEqual(job_config.write_disposition, EmsWriteDisposition.WRITE_APPEND.value)
+
+        field1 = SchemaField("f1", "STRING")
+        field2 = SchemaField("f2", "INTEGER", "REQUIRED")
+        self.assertEqual(job_config.schema, [field1, field2])
 
     @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):

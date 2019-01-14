@@ -8,7 +8,7 @@ from bigquery.job.ems_load_job import EmsLoadJob
 class TestEmsLoadJob(TestCase):
 
     def setUp(self):
-        self.load_config = EmsLoadJobConfig()
+        self.load_config = EmsLoadJobConfig(schema={"fields": [{"type": "INT64", "name": "f"}]})
         error_result = {"some": "error", "happened": "here"}
         self.ems_load_job = EmsLoadJob("test-job-id", self.load_config, EmsJobState.DONE, error_result)
 

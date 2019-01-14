@@ -3,8 +3,14 @@ from bigquery.job.config.ems_job_config import EmsJobConfig
 
 class EmsLoadJobConfig(EmsJobConfig):
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, schema: dict, *args, **kwargs):
         super(EmsLoadJobConfig, self).__init__(*args, **kwargs)
+        # TODO wrap into own error (do not let google exception to leak)
+        self.__schema_json = schema
+
+    @property
+    def schema(self):
+        return self.__schema_json
 
     @property
     def destination_project_id(self):
