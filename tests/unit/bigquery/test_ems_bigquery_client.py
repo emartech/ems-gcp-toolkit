@@ -19,6 +19,7 @@ from bigquery.job.ems_query_job import EmsQueryJob
 MIN_CREATION_TIME = datetime(1970, 4, 4)
 
 
+@patch("bigquery.ems_bigquery_client.bigquery")
 class TestEmsBigqueryClient(TestCase):
     QUERY = "HELLO * BELLO"
     JOB_ID = "some-job-id"
@@ -31,7 +32,6 @@ class TestEmsBigqueryClient(TestCase):
                                               destination_dataset="some_dataset",
                                               destination_table="some_table")
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
 
@@ -46,7 +46,6 @@ class TestEmsBigqueryClient(TestCase):
         assert arguments["job_id_prefix"] is None
         assert result_job_id == "some-job-id"
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_setsDestinationProjectIdToDefaultIfNotGiven(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
         query_config = EmsQueryJobConfig(destination_project_id=None,
@@ -59,7 +58,6 @@ class TestEmsBigqueryClient(TestCase):
         arguments = self.client_mock.query.call_args_list[0][1]
         self.assertEqual(arguments["job_config"].destination.project, "some-project-id")
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_usesCustomLocation(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch, location="WONDERLAND")
 
@@ -68,7 +66,6 @@ class TestEmsBigqueryClient(TestCase):
         arguments = self.client_mock.query.call_args_list[0][1]
         assert arguments["location"] == "WONDERLAND"
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_query_submitsBatchQueryWithProperJobIdPrefixAndReturnsWithResultIterator(
             self,
             bigquery_module_patch: bigquery):
@@ -81,7 +78,6 @@ class TestEmsBigqueryClient(TestCase):
         assert QueryPriority.INTERACTIVE == arguments["job_config"].priority
         assert test_job_id_prefix == arguments["job_id_prefix"]
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_async_load_job_submitsLoadJobAndReturnsJobIdWithProperConfig(self, bigquery_module_patch: bigquery):
         project_id = "some-project-id"
         source_uri = "gs://some-source-uri/to_object"
@@ -112,7 +108,6 @@ class TestEmsBigqueryClient(TestCase):
         field2 = SchemaField("f2", "INTEGER", "REQUIRED")
         self.assertEqual(job_config.schema, [field1, field2])
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch,
                                                   [
@@ -134,7 +129,6 @@ class TestEmsBigqueryClient(TestCase):
         assert result_rows[0] == {"int_column": 42, "str_column": "hello"}
         assert result_rows[1] == {"int_column": 1024, "str_column": "wonderland"}
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_sync_query_wrapsGcpErrors(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
         self.client_mock.query.side_effect = GoogleAPIError("BOOM!")
@@ -147,7 +141,6 @@ class TestEmsBigqueryClient(TestCase):
         self.assertIn("BOOM!", context.exception.args[0])
         self.assertIn(query, context.exception.args[0])
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_run_sync_query_callsGcpEvenIfResultNotUsed(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch, [])
 
@@ -155,7 +148,6 @@ class TestEmsBigqueryClient(TestCase):
 
         self.client_mock.query.assert_called_once()
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_job_list_returnWithEmptyIterator(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.client_mock.list_jobs.return_value = []
@@ -166,7 +158,6 @@ class TestEmsBigqueryClient(TestCase):
         result = list(job_list_iterable)
         assert result == []
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_job_list_returnWithEmsQueryJobIterator(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
@@ -187,7 +178,6 @@ class TestEmsBigqueryClient(TestCase):
         assert result[0].is_failed is False
         assert isinstance(result[0].query_config, EmsQueryJobConfig)
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_job_list_returnsJobWithEmsQueryJobConfigWithoutDestination(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
@@ -204,7 +194,6 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(result[0].query_config.destination_dataset, None)
         self.assertEqual(result[0].query_config.destination_table, None)
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_job_list_returnsJobWithEmsQueryJobConfigWithSetDestination(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
@@ -225,7 +214,6 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(result[0].query_config.destination_dataset, "some-destination-dataset")
         self.assertEqual(result[0].query_config.destination_table, "some-destination-table")
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_jobs_with_prefix_returnsEmptyIfNoJobFoundWithTheGivenPrefix(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.client_mock.list_jobs.return_value = []
@@ -239,7 +227,6 @@ class TestEmsBigqueryClient(TestCase):
                                                       max_results=20,
                                                       min_creation_time=min_creation_time)
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_get_jobs_for_prefix_returnsFilteredJobs_ifJobFoundWithSpecificJobIdPrefix(
             self,
             bigquery_module_patch: bigquery):
@@ -258,7 +245,6 @@ class TestEmsBigqueryClient(TestCase):
 
         self.assertEqual(set(job_ids), {"prefixed-some-job-id1", "prefixed-some-job-id2"})
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_relaunch_failed_jobs_startsQueryJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         job = self.__create_query_job_mock("prefixed-some-job-id", True)
@@ -271,7 +257,6 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual("prefixed-retry-1-", arguments["job_id_prefix"])
         self.assertEqual(arguments["query"], "SIMPLE QUERY")
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_relaunch_failed_jobs_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         first_job = self.__create_query_job_mock("prefixed-some-job-id", True)
@@ -285,7 +270,6 @@ class TestEmsBigqueryClient(TestCase):
         first_call_args = self.client_mock.query.call_args_list[0][1]
         self.assertEqual("prefixed-retry-1-", first_call_args["job_id_prefix"])
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_relaunch_failed_jobs_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         first_job = self.__create_query_job_mock("prefixed-retry-1-some-job-id", True)
@@ -297,7 +281,6 @@ class TestEmsBigqueryClient(TestCase):
         arguments = self.client_mock.query.call_args_list[0][1]
         self.assertEqual("prefixed-retry-2-", arguments["job_id_prefix"])
 
-    @patch("bigquery.ems_bigquery_client.bigquery")
     def test_relaunch_failed_jobs_raisesExceptionIfRetryCountExceedsTheGivenLimit(self,
                                                                                   bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
