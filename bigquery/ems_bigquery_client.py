@@ -127,6 +127,7 @@ class EmsBigqueryClient:
         config = LoadJobConfig()
         config.create_disposition = ems_load_job_config.create_disposition.value
         config.write_disposition = ems_load_job_config.write_disposition.value
+        # TODO wrap into own error (do not let google exception to leak)
         config.schema = _parse_schema_resource(ems_load_job_config.schema)
         return config
 

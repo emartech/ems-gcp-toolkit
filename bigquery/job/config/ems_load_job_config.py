@@ -5,7 +5,6 @@ class EmsLoadJobConfig(EmsJobConfig):
     
     def __init__(self, schema: dict, *args, **kwargs):
         super(EmsLoadJobConfig, self).__init__(*args, **kwargs)
-        # TODO wrap into own error (do not let google exception to leak)
         self.__schema_json = schema
 
     @property
