@@ -82,6 +82,7 @@ class EmsBigqueryClient:
                                         job_id_prefix=job_id_prefix).job_id
 
     def run_async_load_job(self, source_uri: str, job_id_prefix: str, config: EmsLoadJobConfig) -> str:
+        # TODO wrap into own error (do not let google exception to leak)
         return self.__bigquery_client.load_table_from_uri(source_uris=source_uri,
                                                           destination=TableReference(
                                                               DatasetReference(config.destination_project_id,
@@ -127,7 +128,6 @@ class EmsBigqueryClient:
         config = LoadJobConfig()
         config.create_disposition = ems_load_job_config.create_disposition.value
         config.write_disposition = ems_load_job_config.write_disposition.value
-        # TODO wrap into own error (do not let google exception to leak)
         config.schema = _parse_schema_resource(ems_load_job_config.schema)
         return config
 

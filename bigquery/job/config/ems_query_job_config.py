@@ -1,9 +1,14 @@
-from bigquery.job.config.ems_job_config import EmsJobConfig
+from bigquery.job.config.ems_job_config import EmsJobConfig, EmsJobPriority
 
 
 class EmsQueryJobConfig(EmsJobConfig):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self,
+                 priority: EmsJobPriority = EmsJobPriority.INTERACTIVE,
+                 *args, **kwargs):
         super(EmsQueryJobConfig, self).__init__(*args, **kwargs)
+        self.__priority = priority
 
-    # TODO: priority only here, in EmsLoadJobConfig it does not exist
+    @property
+    def priority(self):
+        return self.__priority

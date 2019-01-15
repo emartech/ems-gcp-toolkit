@@ -9,8 +9,7 @@ SCHEMA = {"fields": [{"type": "INT64", "name": "f"}]}
 
 class TestEmsLoadJobConfig(TestCase):
     def setUp(self):
-        self.ems_load_job_config = EmsLoadJobConfig(priority=EmsJobPriority.INTERACTIVE,
-                                                    destination_project_id="test_project",
+        self.ems_load_job_config = EmsLoadJobConfig(destination_project_id="test_project",
                                                     destination_dataset="test_dataset",
                                                     destination_table="test_table",
                                                     create_disposition=EmsCreateDisposition.CREATE_IF_NEEDED,
@@ -31,9 +30,6 @@ class TestEmsLoadJobConfig(TestCase):
 
     def test_destination_table(self):
         self.assertEqual(self.ems_load_job_config.destination_table, "test_table")
-
-    def test_priority(self):
-        self.assertEqual(self.ems_load_job_config.priority, EmsJobPriority.INTERACTIVE)
 
     def test_destination_project_id_ifProjectIdIsNone_raisesValueError(self):
         load_config = EmsLoadJobConfig(destination_project_id=None, schema=SCHEMA)

@@ -22,22 +22,16 @@ class EmsJobConfig(ABC):
 
     @abstractmethod
     def __init__(self,
-                 priority: EmsJobPriority = EmsJobPriority.INTERACTIVE,
                  destination_project_id: str = None,
                  destination_dataset: str = None,
                  destination_table: str = None,
                  create_disposition: EmsCreateDisposition = EmsCreateDisposition.CREATE_IF_NEEDED,
                  write_disposition: EmsWriteDisposition = EmsWriteDisposition.WRITE_APPEND) -> None:
-        self.__priority = priority
         self.__destination_project_id = destination_project_id
         self.__destination_dataset = destination_dataset
         self.__create_disposition = create_disposition
         self.__write_disposition = write_disposition
         self.__destination_table = destination_table
-
-    @property
-    def priority(self):
-        return self.__priority
 
     @property
     def destination_project_id(self):
