@@ -45,14 +45,14 @@ class EmsBigqueryClient:
                 destination = job.destination
                 table_id, dataset_id, project_id = \
                     (destination.table_id, destination.dataset_id, destination.project) \
-                        if destination is not None else (None, None, None)
+                    if destination is not None else (None, None, None)
 
-                config = EmsQueryJobConfig(EmsJobPriority[job.priority],
-                                           project_id,
-                                           dataset_id,
-                                           table_id,
-                                           job.create_disposition,
-                                           job.write_disposition)
+                config = EmsQueryJobConfig(priority=EmsJobPriority[job.priority],
+                                           destination_project_id=project_id,
+                                           destination_dataset=dataset_id,
+                                           destination_table=table_id,
+                                           create_disposition=job.create_disposition,
+                                           write_disposition=job.write_disposition)
                 yield EmsQueryJob(job.job_id, job.query,
                                   config,
                                   EmsJobState(job.state),
@@ -135,6 +135,7 @@ class EmsBigqueryClient:
         job_config = QueryJobConfig()
         job_config.priority = ems_query_job_config.priority.value
         job_config.use_legacy_sql = False
+        job_config.use_query_cache = ems_query_job_config.use_query_cache
         if ems_query_job_config.destination_table is not None:
             job_config.time_partitioning = TimePartitioning("DAY")
             table_reference = TableReference(

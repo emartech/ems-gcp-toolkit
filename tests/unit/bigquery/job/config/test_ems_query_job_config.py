@@ -12,7 +12,8 @@ class TestEmsQueryJobConfig(TestCase):
                                                       destination_dataset="test_dataset",
                                                       destination_table="test_table",
                                                       create_disposition=EmsCreateDisposition.CREATE_IF_NEEDED,
-                                                      write_disposition=EmsWriteDisposition.WRITE_APPEND)
+                                                      write_disposition=EmsWriteDisposition.WRITE_APPEND,
+                                                      use_query_cache=True)
 
     def test_destination_project_id(self):
         self.assertEqual(self.ems_query_job_config.destination_project_id, "test_project")
@@ -31,3 +32,6 @@ class TestEmsQueryJobConfig(TestCase):
 
     def test_priority(self):
         self.assertEqual(self.ems_query_job_config.priority, EmsJobPriority.INTERACTIVE)
+
+    def test_use_query_cache(self):
+        self.assertEqual(self.ems_query_job_config.use_query_cache, True)
