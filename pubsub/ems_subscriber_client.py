@@ -10,8 +10,8 @@ from pubsub.ems_message import EmsMessage
 class EmsSubscriberClient:
     __client = SubscriberClient()
 
-    def subscribe(self, subscription: str, callback: Callable(EmsMessage)) -> EmsStreamingFuture:
-        def callback_wrapper(message: Message):
+    def subscribe(self, subscription: str, callback: Callable[[EmsMessage], None]) -> EmsStreamingFuture:
+        def callback_wrapper(message: Message) -> None:
             callback(EmsMessage(message.data))
             message.ack()
 
