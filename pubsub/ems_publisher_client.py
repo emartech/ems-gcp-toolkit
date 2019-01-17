@@ -7,4 +7,4 @@ class EmsPublisherClient:
     __client = PublisherClient()
 
     def publish(self, topic: str, data: bytes, **attrs) -> Future:
-        return self.__client.publish(topic=topic, data=data, attrs=attrs)
+        return self.__client.publish(topic=topic, data=data, **attrs)
