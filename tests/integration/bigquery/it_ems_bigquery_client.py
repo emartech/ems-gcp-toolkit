@@ -176,7 +176,7 @@ class ItEmsBigqueryClient(TestCase):
                                                      {"type": "TIMESTAMP", "name": "best_before"}]},
                                   write_disposition=EmsWriteDisposition.WRITE_TRUNCATE)
 
-        load_job_id = self.client.run_async_load_job(source_uri, "it_test", config)
+        load_job_id = self.client.run_async_load_job("it_test", config)
         self.__wait_for_job_done(load_job_id)
 
         query = f"""

@@ -2,18 +2,19 @@ import logging
 from collections import Iterable
 from datetime import datetime
 
-from google.cloud.bigquery.schema import _parse_schema_resource
+from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
 
 from bigquery.job.config.ems_job_config import EmsJobPriority
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
-    LoadJobConfig
+    LoadJobConfig, LoadJob
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_job_state import EmsJobState
+from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class EmsBigqueryClient:
                 destination = job.destination
                 table_id, dataset_id, project_id = \
                     (destination.table_id, destination.dataset_id, destination.project) \
-                    if destination is not None else (None, None, None)
+                        if destination is not None else (None, None, None)
 
                 config = EmsQueryJobConfig(priority=EmsJobPriority[job.priority],
                                            destination_project_id=project_id,
@@ -57,6 +58,23 @@ class EmsBigqueryClient:
                                   config,
                                   EmsJobState(job.state),
                                   job.error_result)
+            elif isinstance(job, LoadJob):
+                destination = job.destination
+                table_id, dataset_id, project_id = destination.table_id, destination.dataset_id, destination.project
+                schema = {"fields": _build_schema_resource(job.schema)}
+
+                config = EmsLoadJobConfig(schema=schema,
+                                          source_uri_template=job.source_uris[0],
+                                          destination_project_id=project_id,
+                                          destination_dataset=dataset_id,
+                                          destination_table=table_id,
+                                          create_disposition=job.create_disposition,
+                                          write_disposition=job.write_disposition)
+
+                yield EmsLoadJob(job_id=job.job_id,
+                                 load_config=config,
+                                 state=EmsJobState(job.state),
+                                 error_result=None)
 
     def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:
         jobs = self.get_job_list(min_creation_time, max_result)
@@ -81,9 +99,9 @@ class EmsBigqueryClient:
                                         ems_query_job_config=ems_query_job_config,
                                         job_id_prefix=job_id_prefix).job_id
 
-    def run_async_load_job(self, source_uri: str, job_id_prefix: str, config: EmsLoadJobConfig) -> str:
+    def run_async_load_job(self, job_id_prefix: str, config: EmsLoadJobConfig) -> str:
         # TODO wrap into own error (do not let google exception to leak)
-        return self.__bigquery_client.load_table_from_uri(source_uris=source_uri,
+        return self.__bigquery_client.load_table_from_uri(source_uris=config.source_uri_template,
                                                           destination=TableReference(
                                                               DatasetReference(config.destination_project_id,
                                                                                config.destination_dataset),

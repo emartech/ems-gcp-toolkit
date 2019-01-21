@@ -6,6 +6,7 @@ from unittest.mock import patch, Mock
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField
+from google.cloud.bigquery.schema import _parse_schema_resource
 from google.cloud.bigquery.table import Row, TableReference
 
 from bigquery.ems_api_error import EmsApiError
@@ -14,6 +15,7 @@ from bigquery.job.config.ems_job_config import EmsCreateDisposition, EmsWriteDis
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_job_state import EmsJobState
+from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
 
 MIN_CREATION_TIME = datetime(1970, 4, 4)
@@ -94,7 +96,7 @@ class TestEmsBigqueryClient(TestCase):
         self.client_mock.load_table_from_uri.return_value = self.load_job_mock
 
         ems_bigquery_client = EmsBigqueryClient(project_id)
-        result_job_id = ems_bigquery_client.run_async_load_job(source_uri, "prefix", load_job_config)
+        result_job_id = ems_bigquery_client.run_async_load_job("prefix", load_job_config)
 
         arguments = self.client_mock.load_table_from_uri.call_args_list[0][1]
         self.assertEqual(arguments["source_uris"], source_uri)
@@ -178,6 +180,41 @@ class TestEmsBigqueryClient(TestCase):
         assert result[0].query == "SELECT 1"
         assert result[0].is_failed is False
         assert isinstance(result[0].query_config, EmsQueryJobConfig)
+
+    def test_get_job_list_returnWithEmsLoadJobIterator(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        load_job_mock = Mock(LoadJob)
+        load_job_mock.job_id = "123"
+        load_job_mock.query = "SELECT 1"
+        load_job_mock.state = "DONE"
+        load_job_mock.error_result = None
+        load_job_mock.source_uris = ["gs://some-bucket-id/some-blob-id"]
+        destination = Mock(TableReference)
+        destination.project = "some-other-project-id"
+        destination.dataset_id = "some-destination-dataset"
+        destination.table_id = "some-destination-table"
+        load_job_mock.destination = destination
+        expected_schema = {"fields": [{"description": None, "mode": "NULLABLE", "type": "STRING", "name": "fruit"}]}
+        load_job_mock.schema = _parse_schema_resource(expected_schema)
+
+        self.client_mock.list_jobs.return_value = [load_job_mock]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        job_list_iterable = ems_bigquery_client.get_job_list()
+
+        result = list(job_list_iterable)
+        self.assertEqual(1, len(result))
+        result_job = result[0]
+        self.assertIsInstance(result_job, EmsLoadJob)
+        self.assertEqual(EmsJobState("DONE"), result_job.state)
+        self.assertEqual("123", result_job.job_id)
+        self.assertFalse(result_job.is_failed)
+        self.assertIsInstance(result_job.load_config, EmsLoadJobConfig)
+        self.assertEqual("some-other-project-id", result_job.load_config.destination_project_id)
+        self.assertEqual("some-destination-dataset", result_job.load_config.destination_dataset)
+        self.assertEqual("some-destination-table", result_job.load_config.destination_table)
+        self.assertEqual(expected_schema, result_job.load_config.schema)
+        self.assertEqual("gs://some-bucket-id/some-blob-id", result_job.load_config.source_uri_template)
 
     def test_get_job_list_returnsJobWithEmsQueryJobConfigWithoutDestination(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
