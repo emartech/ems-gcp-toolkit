@@ -1,7 +1,6 @@
 import datetime
 import os
 import random
-import unittest
 import uuid
 from unittest import TestCase
 
@@ -18,6 +17,8 @@ from bigquery.job.config.ems_job_config import EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_job_state import EmsJobState
+from bigquery.job.ems_load_job import EmsLoadJob
+from bigquery.job.ems_query_job import EmsQueryJob
 
 
 class ItEmsBigqueryClient(TestCase):
@@ -148,25 +149,42 @@ class ItEmsBigqueryClient(TestCase):
 
         self.assertRegex(job_ids[0], job_prefix + "-retry-1-.*")
 
-    @unittest.skip("seems to be not completed testcase")
-    def test_get_job_list_returnsOnlyQueryJobs(self):
-        table_reference = TableReference(self.DATASET, self.table_reference.table_id + "_copy")
-        self.GCP_BIGQUERY_CLIENT.copy_table(sources=self.table_reference, destination=table_reference)
-
     def test_get_job_list_returnsLoadJob(self):
-        config = EmsLoadJobConfig({"fields":[{"name": "some_name", "type": "STRING"}]},
+        config = EmsLoadJobConfig({"fields": [{"name": "some_name", "type": "STRING"}]},
                                   "gs://some-non-existing-bucket-id/blob-id",
                                   destination_project_id=self.GCP_PROJECT_ID,
                                   destination_dataset="it_test_dataset",
                                   destination_table="some_table")
+        min_creation_time = datetime.datetime.utcnow()
         unique_id = self.client.run_async_load_job("load_job_test", config)
-        jobs_iterator = self.client.get_job_list()
+        self.__wait_for_job_done(unique_id)
+        jobs_iterator = self.client.get_jobs_with_prefix("load_job_test", min_creation_time)
         found = unique_id in [job.job_id for job in jobs_iterator]
 
         self.assertTrue(found)
 
+    def test_get_job_list_returnsQueryAndLoadJobsAsWell(self):
+        load_config = EmsLoadJobConfig({"fields": [{"name": "some_name", "type": "STRING"}]},
+                                       "gs://some-non-existing-bucket-id/blob-id",
+                                       destination_project_id=self.GCP_PROJECT_ID,
+                                       destination_dataset="it_test_dataset",
+                                       destination_table="some_table")
+
+        min_creation_time = datetime.datetime.utcnow()
+        id_for_query_job = self.client.run_async_query(self.DUMMY_QUERY, job_id_prefix="it_job")
+        id_for_load_job = self.client.run_async_load_job(job_id_prefix="it_job", config=load_config)
+
+        self.__wait_for_job_done(id_for_query_job)
+        self.__wait_for_job_done(id_for_load_job)
+        jobs_iterator = self.client.get_jobs_with_prefix("it_job", min_creation_time)
+        job_types = [type(j) for j in jobs_iterator]
+
+        self.assertEqual(2, len(job_types))
+        self.assertIn(EmsQueryJob, job_types)
+        self.assertIn(EmsLoadJob, job_types)
+
     def test_run_async_load_job_loadsFileFromBucketToNewBigqueryTable(self):
-        storage_client = storage.Client(self.GCP_PROJECT_ID,)
+        storage_client = storage.Client(self.GCP_PROJECT_ID, )
         bucket_name = "it_test_ems_gcp_toolkit"
         try:
             bucket = storage_client.get_bucket(bucket_name)
@@ -199,7 +217,7 @@ class ItEmsBigqueryClient(TestCase):
 
         result = self.client.run_sync_query(query=query)
         expected = [{"fruit": "apple", "quantity": random_quantity, "is_delicious": True,
-                 "best_before": datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)}]
+                     "best_before": datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)}]
         self.assertEquals(expected, list(result))
 
     @retry(stop=(stop_after_delay(10)))

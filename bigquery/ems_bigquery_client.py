@@ -2,15 +2,14 @@ import logging
 from collections import Iterable
 from datetime import datetime
 
-from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
-
-from bigquery.job.config.ems_job_config import EmsJobPriority
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
     LoadJobConfig, LoadJob
+from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
 
 from bigquery.ems_api_error import EmsApiError
+from bigquery.job.config.ems_job_config import EmsJobPriority
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_job_state import EmsJobState
