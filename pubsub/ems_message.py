@@ -16,3 +16,7 @@ class EmsMessage:
     @property
     def attributes(self) -> Dict[str, str]:
         return self.__attributes
+
+    @property
+    def ack_id(self) -> str:
+        return self.__ack_id
