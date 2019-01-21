@@ -10,7 +10,7 @@ class EmsMessage:
         self.__ack_id = ack_id
 
     @property
-    def data(self)  -> bytes:
+    def data(self):
         return self.__data
 
     @property
