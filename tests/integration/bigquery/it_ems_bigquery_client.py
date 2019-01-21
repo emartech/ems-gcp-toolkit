@@ -1,6 +1,7 @@
 import datetime
 import os
 import random
+import unittest
 import uuid
 from unittest import TestCase
 
@@ -103,7 +104,7 @@ class ItEmsBigqueryClient(TestCase):
 
         assert job.state is not None
 
-    def test_run_get_job_list(self):
+    def test_run_get_job_list_returnsQueryJob(self):
         unique_id = self.client.run_async_query(self.DUMMY_QUERY)
         jobs_iterator = self.client.get_job_list()
         found = unique_id in [job.job_id for job in jobs_iterator]
@@ -147,9 +148,22 @@ class ItEmsBigqueryClient(TestCase):
 
         self.assertRegex(job_ids[0], job_prefix + "-retry-1-.*")
 
+    @unittest.skip("seems to be not completed testcase")
     def test_get_job_list_returnsOnlyQueryJobs(self):
         table_reference = TableReference(self.DATASET, self.table_reference.table_id + "_copy")
         self.GCP_BIGQUERY_CLIENT.copy_table(sources=self.table_reference, destination=table_reference)
+
+    def test_get_job_list_returnsLoadJob(self):
+        config = EmsLoadJobConfig({"fields":[{"name": "some_name", "type": "STRING"}]},
+                                  "gs://some-non-existing-bucket-id/blob-id",
+                                  destination_project_id=self.GCP_PROJECT_ID,
+                                  destination_dataset="it_test_dataset",
+                                  destination_table="some_table")
+        unique_id = self.client.run_async_load_job("load_job_test", config)
+        jobs_iterator = self.client.get_job_list()
+        found = unique_id in [job.job_id for job in jobs_iterator]
+
+        self.assertTrue(found)
 
     def test_run_async_load_job_loadsFileFromBucketToNewBigqueryTable(self):
         storage_client = storage.Client(self.GCP_PROJECT_ID,)
