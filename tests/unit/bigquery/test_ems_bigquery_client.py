@@ -87,7 +87,8 @@ class TestEmsBigqueryClient(TestCase):
         load_job_config = EmsLoadJobConfig(destination_project_id="some-destination-project-id",
                                            destination_dataset="some-destination-dataset",
                                            destination_table="some-destination-table",
-                                           schema=input_json_schema)
+                                           schema=input_json_schema,
+                                           source_uri_template=source_uri)
         self.load_job_mock = Mock(LoadJob)
         self.load_job_mock.job_id = self.JOB_ID
         self.client_mock.load_table_from_uri.return_value = self.load_job_mock

@@ -3,9 +3,14 @@ from bigquery.job.config.ems_job_config import EmsJobConfig
 
 class EmsLoadJobConfig(EmsJobConfig):
     
-    def __init__(self, schema: dict, *args, **kwargs):
+    def __init__(self, schema: dict, source_uri_template: str, *args, **kwargs):
         super(EmsLoadJobConfig, self).__init__(*args, **kwargs)
         self.__schema_json = schema
+        self.__source_uri_template = source_uri_template
+
+    @property
+    def source_uri_template(self):
+        return self.__source_uri_template
 
     @property
     def schema(self):

@@ -165,7 +165,9 @@ class ItEmsBigqueryClient(TestCase):
         blob = bucket.blob(blob_name)
         random_quantity = random.randint(10000, 99000)
         blob.upload_from_string(f"apple,{random_quantity},True,1970-01-01T12:00:00.000Z\n")
-        config = EmsLoadJobConfig(destination_project_id=self.GCP_PROJECT_ID,
+        source_uri = f"gs://{bucket_name}/{blob_name}"
+        config = EmsLoadJobConfig(source_uri_template=source_uri,
+                                  destination_project_id=self.GCP_PROJECT_ID,
                                   destination_dataset=self.DATASET.dataset_id,
                                   destination_table="load_job_test",
                                   schema={"fields": [{"type": "STRING", "name": "fruit"},
@@ -174,7 +176,7 @@ class ItEmsBigqueryClient(TestCase):
                                                      {"type": "TIMESTAMP", "name": "best_before"}]},
                                   write_disposition=EmsWriteDisposition.WRITE_TRUNCATE)
 
-        load_job_id = self.client.run_async_load_job(f"gs://{bucket_name}/{blob_name}", "it_test", config)
+        load_job_id = self.client.run_async_load_job(source_uri, "it_test", config)
         self.__wait_for_job_done(load_job_id)
 
         query = f"""
