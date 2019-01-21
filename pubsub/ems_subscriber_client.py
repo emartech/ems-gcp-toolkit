@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Iterator, List
 
 from google.cloud.pubsub_v1 import SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message
@@ -12,7 +12,7 @@ class EmsSubscriberClient:
 
     def subscribe(self, subscription: str, callback: Callable[[EmsMessage], None]) -> EmsStreamingFuture:
         def callback_wrapper(message: Message) -> None:
-            callback(EmsMessage(message.data))
+            callback(EmsMessage(message.ack_id, message.data, message.attributes))
             message.ack()
 
         future = self.__client.subscribe(
@@ -21,3 +21,20 @@ class EmsSubscriberClient:
         )
 
         return EmsStreamingFuture(future)
+
+    def pull(self,
+             subscription: str,
+             max_messages: int,
+             return_immediately: bool=None) -> Iterator[EmsMessage]:
+        messages = self.__client.pull(
+            subscription=subscription,
+            max_messages=max_messages,
+            return_immediately=return_immediately
+        ).received_messages
+
+        return map(lambda msg: EmsMessage(msg.ack_id, msg.message.data, msg.message.attributes), messages)
+
+    def acknowledge(self,
+                    subscription: str,
+                    ack_ids: List[str]) -> None:
+        self.__client.acknowledge(subscription=subscription, ack_ids=ack_ids)
