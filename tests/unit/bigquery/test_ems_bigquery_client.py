@@ -319,6 +319,21 @@ class TestEmsBigqueryClient(TestCase):
         arguments = self.client_mock.query.call_args_list[0][1]
         self.assertEqual("prefixed-retry-2-", arguments["job_id_prefix"])
 
+    def test_relaunch_failed_jobs_canRetryMoreThanNineTimes(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        nineth_job = self.__create_query_job_mock("prefixed-retry-9-some-job-id", True)
+        tenth_job = self.__create_query_job_mock("prefixed-retry-10-some-job-id", True)
+        self.client_mock.list_jobs.return_value = [nineth_job, tenth_job]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME, max_attempts=12)
+
+        arguments = self.client_mock.query.call_args_list[0][1]
+        self.assertEqual("prefixed-retry-10-", arguments["job_id_prefix"])
+
+        arguments = self.client_mock.query.call_args_list[1][1]
+        self.assertEqual("prefixed-retry-11-", arguments["job_id_prefix"])
+
     def test_relaunch_failed_jobs_raisesExceptionIfRetryCountExceedsTheGivenLimit(self,
                                                                                   bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock

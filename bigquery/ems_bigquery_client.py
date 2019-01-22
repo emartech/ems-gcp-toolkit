@@ -1,4 +1,5 @@
 import logging
+import re
 from collections import Iterable
 from datetime import datetime
 
@@ -133,7 +134,8 @@ class EmsBigqueryClient:
         return prefix_with_retry
 
     def __get_retry_counter(self, job_id, job_id_prefix):
-        return int(job_id[len(job_id_prefix) + len(RETRY)])
+        regex = job_id_prefix + RETRY + "([0-9]+)-.+"
+        return int(re.search(regex, job_id).group(1))
 
     def __execute_query_job(self, query: str, ems_query_job_config: EmsQueryJobConfig, job_id_prefix=None) -> QueryJob:
         return self.__bigquery_client.query(query=query,
