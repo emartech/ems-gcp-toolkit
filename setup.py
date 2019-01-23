@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ems-gcp-toolkit",
-    version="0.1.16",
+    version="0.1.17",
     packages=find_packages(exclude="tests"),
     url="https://github.com/emartech/ems-gcp-toolkit",
     license="MIT",
