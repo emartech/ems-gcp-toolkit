@@ -28,6 +28,9 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
+    def get_job_state(self, job_id) -> str:
+        return self.__bigquery_client.get_job(job_id).state
+
     def get_job_list(self, min_creation_time: datetime = None, max_result: int = 20) -> Iterable:
         """
         Args:
