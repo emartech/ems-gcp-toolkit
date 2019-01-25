@@ -3,7 +3,7 @@ import re
 from collections import Iterable
 from datetime import datetime
 
-from google.api_core.exceptions import GoogleAPIError
+from google.api_core.exceptions import GoogleAPIError, NotFound
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
     LoadJobConfig, LoadJob
@@ -28,9 +28,12 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
-    def get_job_state(self, job_id: str) -> (str, bool):
-        job = self.__bigquery_client.get_job(job_id)
-        return job.state, len(job.error_result) != 0
+    def table_exists(self, table_ref: str) -> bool:
+        try:
+            self.__bigquery_client.get_table(table_ref=table_ref)
+            return True
+        except NotFound:
+            return False
 
     def get_job_list(self, min_creation_time: datetime = None, max_result: int = 20) -> Iterable:
         """
