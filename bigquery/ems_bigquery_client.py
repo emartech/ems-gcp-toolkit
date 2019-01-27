@@ -28,9 +28,9 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
 
-    def table_exists(self, table_ref: str) -> bool:
+    def table_exists(self, table: str) -> bool:
         try:
-            self.__bigquery_client.get_table(table_ref=table_ref)
+            self.__bigquery_client.get_table(table_ref=TableReference.from_string(table))
             return True
         except NotFound:
             return False
