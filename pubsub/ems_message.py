@@ -5,12 +5,16 @@ from typing import Dict
 class EmsMessage:
 
     def __init__(self, ack_id: str, data: bytes, attributes: Dict[str, str]):
-        self.__data = json.loads(data, encoding="utf-8")
+        self.__data = None
+        self.__raw_data = data
         self.__attributes = attributes
         self.__ack_id = ack_id
 
     @property
     def data(self):
+        if self.__data is None:
+            self.__data = json.loads(self.__raw_data, encoding="utf-8")
+
         return self.__data
 
     @property
