@@ -11,11 +11,15 @@ class EmsMessage:
         self.__ack_id = ack_id
 
     @property
-    def data(self):
+    def data_json(self):
         if self.__data is None:
             self.__data = json.loads(self.__raw_data, encoding="utf-8")
 
         return self.__data
+
+    @property
+    def data_raw(self):
+        return self.__raw_data
 
     @property
     def attributes(self) -> Dict[str, str]:
