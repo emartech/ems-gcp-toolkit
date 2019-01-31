@@ -34,7 +34,7 @@ class EmsSubscriberClient:
             return_immediately=return_immediately
         ).received_messages
 
-        return map(lambda msg: EmsMessage(msg.ack_id, msg.message.data_json, msg.message.attributes), messages)
+        return map(lambda msg: EmsMessage(msg.ack_id, msg.message.data, msg.message.attributes), messages)
 
     def acknowledge(self,
                     subscription: str,
