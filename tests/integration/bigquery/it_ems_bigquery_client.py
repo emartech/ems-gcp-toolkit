@@ -16,6 +16,7 @@ from bigquery.ems_bigquery_client import EmsBigqueryClient
 from bigquery.job.config.ems_job_config import EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.ems_extract_job import EmsExtractJob
 from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
@@ -55,6 +56,18 @@ class ItEmsBigqueryClient(TestCase):
         self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
 
         self.client = EmsBigqueryClient(self.GCP_PROJECT_ID)
+        self.storage_client = storage.Client(self.GCP_PROJECT_ID)
+
+    def __get_test_bucket(self, bucket_name):
+
+        try:
+            bucket = self.storage_client.get_bucket(bucket_name)
+        except NotFound:
+            bucket = self.storage_client.bucket(bucket_name)
+            bucket.location = "europe-west1"
+            bucket.storage_class = "REGIONAL"
+            bucket.create()
+        return bucket
 
     def __delete_if_exists(self, table):
         try:
@@ -163,36 +176,95 @@ class ItEmsBigqueryClient(TestCase):
 
         self.assertTrue(found)
 
-    def test_get_job_list_returnsQueryAndLoadJobsAsWell(self):
+    def test_get_job_list_returnsExtractJob(self):
+        min_creation_time = datetime.datetime.utcnow()
+        destination_uris = ["gs://some-non-existing-bucket-id/destination1"]
+        table_path = self.__get_table_path()
+        unique_id = self.client.run_async_extract_job("extract_job_test", table_path, destination_uris)
+        self.__wait_for_job_done(unique_id)
+        jobs_iterator = self.client.get_jobs_with_prefix("extract_job_test", min_creation_time)
+
+        job: EmsExtractJob = next(j for j in jobs_iterator if j.job_id == unique_id)
+
+        self.assertEqual(job.table, table_path)
+        self.assertEqual(job.destination_uris, destination_uris)
+        self.assertEqual(job.state, "DONE")
+        self.assertTrue(job.is_failed)
+
+    def test_run_async_extract_job_shouldSaveToBucket(self):
+        query = self.INSERT_TEMPLATE.format(self.__get_table_path())
+        self.client.run_sync_query(query)
+        min_creation_time = datetime.datetime.utcnow()
+
+        bucket_name = self.GCP_PROJECT_ID + "-gcp-toolkit-it"
+        bucket = self.__get_test_bucket(bucket_name)
+        blob_name = f'exported_{int(min_creation_time.timestamp())}.csv'
+
+        job = self.__run_async_extract_job(min_creation_time, bucket_name, blob_name, False)
+
+        blob = bucket.blob(blob_name)
+        self.assertFalse(job.is_failed)
+        self.assertTrue(blob.exists())
+        self.assertEqual(blob.download_as_string(), b'1,hello\n')
+
+        bucket.delete_blob(blob_name)
+
+    def test_run_async_extract_job_shouldSaveToBucketWithHeader(self):
+        query = self.INSERT_TEMPLATE.format(self.__get_table_path())
+        self.client.run_sync_query(query)
+        min_creation_time = datetime.datetime.utcnow()
+
+        bucket_name = self.GCP_PROJECT_ID + "-gcp-toolkit-it"
+        bucket = self.__get_test_bucket(bucket_name)
+        blob_name = f'exported_{int(min_creation_time.timestamp())}.csv'
+
+        job = self.__run_async_extract_job(min_creation_time, bucket_name, blob_name, True)
+
+        blob = bucket.blob(blob_name)
+        self.assertFalse(job.is_failed)
+        self.assertTrue(blob.exists())
+        self.assertEqual(blob.download_as_string(), b'int_data,str_data\n1,hello\n')
+
+        bucket.delete_blob(blob_name)
+
+    def __run_async_extract_job(self, min_creation_time, bucket_name, blob_name, print_header):
+        table_path = self.__get_table_path()
+        job_id_prefix = "extract_job_test"
+        unique_id = self.client.run_async_extract_job(job_id_prefix, table_path, [f'gs://{bucket_name}/{blob_name}'],
+                                                      print_header)
+        self.__wait_for_job_done(unique_id)
+        jobs_iterator = self.client.get_jobs_with_prefix(job_id_prefix, min_creation_time)
+        job: EmsExtractJob = next(j for j in jobs_iterator if j.job_id == unique_id)
+        return job
+
+    def test_get_job_list_returnsAllKindOfJobs(self):
         load_config = EmsLoadJobConfig({"fields": [{"name": "some_name", "type": "STRING"}]},
                                        "gs://some-non-existing-bucket-id/blob-id",
                                        destination_project_id=self.GCP_PROJECT_ID,
                                        destination_dataset="it_test_dataset",
                                        destination_table="some_table")
+        destination_uris = ["gs://some-non-existing-bucket-id/destination1"]
 
         min_creation_time = datetime.datetime.utcnow()
         id_for_query_job = self.client.run_async_query(self.DUMMY_QUERY, job_id_prefix="it_job")
         id_for_load_job = self.client.run_async_load_job(job_id_prefix="it_job", config=load_config)
+        id_for_extract_job = self.client.run_async_extract_job(job_id_prefix="it_job", table=self.__get_table_path(),
+                                                               destination_uris=destination_uris)
 
         self.__wait_for_job_done(id_for_query_job)
         self.__wait_for_job_done(id_for_load_job)
+        self.__wait_for_job_done(id_for_extract_job)
         jobs_iterator = self.client.get_jobs_with_prefix("it_job", min_creation_time)
         job_types = [type(j) for j in jobs_iterator]
 
-        self.assertEqual(2, len(job_types))
+        self.assertEqual(3, len(job_types))
         self.assertIn(EmsQueryJob, job_types)
         self.assertIn(EmsLoadJob, job_types)
+        self.assertIn(EmsExtractJob, job_types)
 
     def test_run_async_load_job_loadsFileFromBucketToNewBigqueryTable(self):
-        storage_client = storage.Client(self.GCP_PROJECT_ID, )
         bucket_name = "it_test_ems_gcp_toolkit"
-        try:
-            bucket = storage_client.get_bucket(bucket_name)
-        except NotFound:
-            bucket = storage_client.bucket(bucket_name)
-            bucket.location = "europe-west1"
-            bucket.storage_class = "REGIONAL"
-            bucket.create()
+        bucket = self.__get_test_bucket(bucket_name)
         blob_name = "sample_fruit_test.csv"
         blob = bucket.blob(blob_name)
         random_quantity = random.randint(10000, 99000)

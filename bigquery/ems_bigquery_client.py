@@ -2,17 +2,19 @@ import logging
 import re
 from collections import Iterable
 from datetime import datetime
+from typing import List
 
 from google.api_core.exceptions import GoogleAPIError, NotFound
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
-    LoadJobConfig, LoadJob
+    LoadJobConfig, LoadJob, ExtractJobConfig, ExtractJob
 from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.job.config.ems_job_config import EmsJobPriority
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.ems_extract_job import EmsExtractJob
 from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
@@ -82,6 +84,11 @@ class EmsBigqueryClient:
                                  load_config=config,
                                  state=EmsJobState(job.state),
                                  error_result=None)
+            elif isinstance(job, ExtractJob):
+                table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
+                destination_uris = job.destination_uris
+                yield EmsExtractJob(job_id=job.job_id, table=table, destination_uris=destination_uris, state=job.state,
+                                    error_result=job.error_result)
 
     def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:
         jobs = self.get_job_list(min_creation_time, max_result)
@@ -116,6 +123,18 @@ class EmsBigqueryClient:
                                                           job_id_prefix=job_id_prefix,
                                                           location=self.__location,
                                                           job_config=self.__create_load_job_config(config)).job_id
+
+    def run_async_extract_job(self, job_id_prefix: str, table: str, destination_uris: List[str],
+                              print_header: bool = False) -> str:
+
+        extract_job_config = ExtractJobConfig()
+        extract_job_config.print_header = print_header
+
+        return self.__bigquery_client.extract_table(source=TableReference.from_string(full_table_id=table),
+                                                    destination_uris=destination_uris,
+                                                    job_id_prefix=job_id_prefix,
+                                                    location=self.__location,
+                                                    job_config=extract_job_config).job_id
 
     def run_sync_query(self,
                        query: str,

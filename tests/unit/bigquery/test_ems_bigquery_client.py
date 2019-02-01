@@ -5,7 +5,7 @@ from unittest.mock import patch, Mock
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField
+from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField, ExtractJob
 from google.cloud.bigquery.schema import _parse_schema_resource
 from google.cloud.bigquery.table import Row, TableReference
 
@@ -110,6 +110,27 @@ class TestEmsBigqueryClient(TestCase):
         field1 = SchemaField("f1", "STRING")
         field2 = SchemaField("f2", "INTEGER", "REQUIRED")
         self.assertEqual(job_config.schema, [field1, field2])
+
+    def test_run_async_extract_job_submitsExtractJobAndReturnsJobIdWithProperConfig(self,
+                                                                                    bigquery_module_patch: bigquery):
+        project_id = "some-project-id"
+        table = "some-project.some-dataset.some-table"
+        destination_uris = ["gs://some-source-uri/to_object1", "gs://some-source-uri/to_object2"]
+        job_prefix = "some_job_prefix"
+        bigquery_module_patch.Client.return_value = self.client_mock
+
+        expected_job_id = self.JOB_ID
+        self.extract_job_mock = Mock(ExtractJob)
+        self.extract_job_mock.job_id = expected_job_id
+        self.client_mock.extract_table.return_value = self.extract_job_mock
+
+        ems_bigquery_client = EmsBigqueryClient(project_id)
+        result_job_id = ems_bigquery_client.run_async_extract_job(job_id_prefix=job_prefix,
+                                                                  table=table,
+                                                                  destination_uris=destination_uris)
+
+        self.assertEqual(result_job_id, expected_job_id)
+
 
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch,
