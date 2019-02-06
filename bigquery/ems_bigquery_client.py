@@ -87,7 +87,10 @@ class EmsBigqueryClient:
             elif isinstance(job, ExtractJob):
                 table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
                 destination_uris = job.destination_uris
-                yield EmsExtractJob(job_id=job.job_id, table=table, destination_uris=destination_uris, state=job.state,
+                yield EmsExtractJob(job_id=job.job_id,
+                                    table=table,
+                                    destination_uris=destination_uris,
+                                    state=EmsJobState(job.state),
                                     error_result=job.error_result)
 
     def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:

@@ -188,7 +188,8 @@ class ItEmsBigqueryClient(TestCase):
 
         self.assertEqual(job.table, table_path)
         self.assertEqual(job.destination_uris, destination_uris)
-        self.assertEqual(job.state, "DONE")
+        self.assertIsInstance(job.state, EmsJobState)
+        self.assertEqual(job.state.value, "DONE")
         self.assertTrue(job.is_failed)
 
     def test_run_async_extract_job_shouldSaveToBucket(self):
