@@ -20,31 +20,31 @@ class EmsCloudsqlClient:
         self.__discovery_service = discovery.build('sqladmin', 'v1beta4')
         self.__storage_client = storage.Client(project_id)
 
-    def load_table_from_blob(self, database: str, table_name: str, source_uri: str) -> None:
-        tmp_table_name = self.__create_tmp_table_from(database, table_name)
+    def load_table_from_blob(self, database: str, table_name: str, source_uri: str, import_user: str) -> None:
+        tmp_table_name = self.__create_tmp_table_from(database, table_name, import_user)
         self.__import_csv_from_bucket(database, tmp_table_name, source_uri, self.IMPORT_CSV_TIMEOUT)
-        self.__reload_table_from_tmp(database, tmp_table_name, table_name)
+        self.__reload_table_from_tmp(database, tmp_table_name, table_name, import_user)
 
-    def run_sql(self, database: str, sql_query: str, timeout_seconds: str) -> None:
+    def run_sql(self, database: str, sql_query: str, timeout_seconds: str, import_user: str) -> None:
         suffix = str(int(datetime.datetime.utcnow().timestamp()))
         blob_name = f"sql_query_{suffix}"
         self.__save_to_bucket(sql_query, blob_name)
-        self.__import_sql_from_bucket(database, f"gs://{self.__bucket_name}/{blob_name}", timeout_seconds)
+        self.__import_sql_from_bucket(database, f"gs://{self.__bucket_name}/{blob_name}", timeout_seconds, import_user)
         bucket = self.__get_or_create_bucket(self.__bucket_name)
         bucket.delete_blob(blob_name)
 
-    def __create_tmp_table_from(self, database: str, source_table: str) -> str:
+    def __create_tmp_table_from(self, database: str, source_table: str, import_user: str) -> str:
         tmp_table = f"tmp_{source_table}"
         sql_query = f"""DROP TABLE IF EXISTS  {tmp_table} ;
             CREATE TABLE {tmp_table} AS SELECT * FROM {source_table} WHERE False;"""
-        self.run_sql(database, sql_query, self.CREATE_TMP_TABLE_TIMEOUT)
+        self.run_sql(database, sql_query, self.CREATE_TMP_TABLE_TIMEOUT, import_user)
         return tmp_table
 
-    def __reload_table_from_tmp(self, database: str, source_table: str, destination_table: str) -> None:
+    def __reload_table_from_tmp(self, database: str, source_table: str, destination_table: str, import_user) -> None:
         sql_query = f"""TRUNCATE TABLE {destination_table};
             insert into {destination_table} select * from {source_table};
             drop table {source_table};"""
-        self.run_sql(database, sql_query, self.RELOAD_TABLE_TIMEOUT)
+        self.run_sql(database, sql_query, self.RELOAD_TABLE_TIMEOUT, import_user)
 
     def __import_csv_from_bucket(self, database: str, destination_table_name: str, source_csv_uri: str,
                                  timeout_seconds: float) -> None:
@@ -64,8 +64,8 @@ class EmsCloudsqlClient:
                                                                body=import_request_body)
         self.__wait_for_job_done(request.execute()["name"], timeout_seconds)
 
-    def __import_sql_from_bucket(self, database: str, source_sql_uri: str, timeout_seconds: float) -> None:
-        import_user = "postgres"
+    def __import_sql_from_bucket(self, database: str, source_sql_uri: str, timeout_seconds: float,
+                                 import_user: str) -> None:
         request_body = {
             "importContext": {
                 "kind": "sql#importContext",
