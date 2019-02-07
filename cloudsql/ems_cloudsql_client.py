@@ -25,7 +25,7 @@ class EmsCloudsqlClient:
         self.__import_csv_from_bucket(database, tmp_table_name, source_uri, self.IMPORT_CSV_TIMEOUT)
         self.__reload_table_from_tmp(database, tmp_table_name, table_name, import_user)
 
-    def run_sql(self, database: str, sql_query: str, timeout_seconds: str, import_user: str) -> None:
+    def run_sql(self, database: str, sql_query: str, timeout_seconds: float, import_user: str) -> None:
         suffix = str(int(datetime.datetime.utcnow().timestamp()))
         blob_name = f"sql_query_{suffix}"
         self.__save_to_bucket(sql_query, blob_name)
