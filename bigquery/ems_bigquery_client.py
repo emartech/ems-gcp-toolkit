@@ -141,13 +141,17 @@ class EmsBigqueryClient:
 
     def run_sync_query(self,
                        query: str,
-                       ems_query_job_config: EmsQueryJobConfig = EmsQueryJobConfig(priority=EmsJobPriority.INTERACTIVE)
+                       ems_query_job_config: EmsQueryJobConfig = EmsQueryJobConfig(priority=EmsJobPriority.INTERACTIVE),
+                       job_id_prefix: str = None
                        ) -> Iterable:
         logger.info("Sync query executed with priority: %s", ems_query_job_config.priority)
         try:
             return self.__get_mapped_iterator(
-                self.__execute_query_job(query=query,
-                                         ems_query_job_config=ems_query_job_config).result()
+                self.__execute_query_job(
+                    query=query,
+                    ems_query_job_config=ems_query_job_config,
+                    job_id_prefix=job_id_prefix
+                ).result()
             )
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query | {} |: {}!".format(query, e.args[0]))
