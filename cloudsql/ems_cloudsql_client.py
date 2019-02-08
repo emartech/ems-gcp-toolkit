@@ -17,7 +17,7 @@ class EmsCloudsqlClient:
         self.__project_id = project_id
         self.__bucket_name = project_id + "-tmp-bucket"
         self.__instance_id = instance_id
-        self.__discovery_service = discovery.build('sqladmin', 'v1beta4')
+        self.__discovery_service = discovery.build('sqladmin', 'v1beta4', cache_discovery=False)
         self.__storage_client = storage.Client(project_id)
 
     def load_table_from_blob(self, database: str, table_name: str, source_uri: str, import_user: str) -> None:

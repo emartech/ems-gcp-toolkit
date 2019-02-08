@@ -15,7 +15,7 @@ class ItEmsCloudSqlClient(TestCase):
     GCP_PROJECT_ID = os.environ["GCP_PROJECT_ID"]
     GCP_CLOUDSQL_INSTANCE_ID = "ems-replenishment-dev"
     DATABASE = "ems-gcp-toolkit-test"
-    DISCOVERY_SERVICE = discovery.build('sqladmin', 'v1beta4')
+    DISCOVERY_SERVICE = discovery.build('sqladmin', 'v1beta4', cache_discovery=False)
     BUCKET_NAME = GCP_PROJECT_ID + "-gcp-toolkit-it"
     IMPORT_USER = "postgres"
     JOB_TIMEOUT_SECONDS = 30
