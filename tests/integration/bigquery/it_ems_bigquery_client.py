@@ -293,6 +293,32 @@ class ItEmsBigqueryClient(TestCase):
                      "best_before": datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)}]
         self.assertEquals(expected, list(result))
 
+    def test_run_async_load_job_whenLoadingFileWithHeader_headerIsSkiped(self):
+        bucket_name = "it_test_ems_gcp_toolkit"
+        bucket = self.__get_test_bucket(bucket_name)
+        blob_name = "sample_test_with_header.csv"
+        blob = bucket.blob(blob_name)
+        blob.upload_from_string(f"HEADER\nROW\n")
+        source_uri = f"gs://{bucket_name}/{blob_name}"
+        config = EmsLoadJobConfig(source_uri_template=source_uri,
+                                  destination_project_id=self.GCP_PROJECT_ID,
+                                  destination_dataset=self.DATASET.dataset_id,
+                                  destination_table="load_job_test_skip_header",
+                                  schema={"fields": [{"type": "STRING", "name": "COLUMN"}]},
+                                  write_disposition=EmsWriteDisposition.WRITE_TRUNCATE,
+                                  skip_leading_rows=1)
+
+        load_job_id = self.client.run_async_load_job("it_test", config)
+        self.__wait_for_job_done(load_job_id)
+
+        query = f"""
+        SELECT * from `{config.destination_project_id}.{config.destination_dataset}.{config.destination_table}`
+        """
+
+        result = self.client.run_sync_query(query=query)
+        expected = [{"COLUMN": "ROW"}]
+        self.assertEquals(expected, list(result))
+
     @retry(stop=(stop_after_delay(10)))
     def __wait_for_job_submitted(self, job_id):
         self.GCP_BIGQUERY_CLIENT.get_job(job_id)

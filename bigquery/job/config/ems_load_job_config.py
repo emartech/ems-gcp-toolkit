@@ -3,10 +3,11 @@ from bigquery.job.config.ems_job_config import EmsJobConfig
 
 class EmsLoadJobConfig(EmsJobConfig):
     
-    def __init__(self, schema: dict, source_uri_template: str, *args, **kwargs):
+    def __init__(self, schema: dict, source_uri_template: str, skip_leading_rows: str=0, *args, **kwargs):
         super(EmsLoadJobConfig, self).__init__(*args, **kwargs)
         self.__schema_json = schema
         self.__source_uri_template = source_uri_template
+        self.__skip_leading_rows = skip_leading_rows
 
     @property
     def source_uri_template(self):
@@ -36,6 +37,10 @@ class EmsLoadJobConfig(EmsJobConfig):
         self.__validate(destination_table)
 
         return destination_table
+
+    @property
+    def skip_leading_rows(self):
+        return self.__skip_leading_rows
 
     def __validate(self, value):
         if value is None or value.strip() == "":

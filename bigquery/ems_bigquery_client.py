@@ -181,6 +181,7 @@ class EmsBigqueryClient:
         config.create_disposition = ems_load_job_config.create_disposition.value
         config.write_disposition = ems_load_job_config.write_disposition.value
         config.schema = _parse_schema_resource(ems_load_job_config.schema)
+        config.skip_leading_rows = ems_load_job_config.skip_leading_rows
         return config
 
     def __create_job_config(self, ems_query_job_config: EmsQueryJobConfig) -> QueryJobConfig:
