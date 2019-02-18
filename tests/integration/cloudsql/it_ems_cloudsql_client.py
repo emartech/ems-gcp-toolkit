@@ -1,5 +1,4 @@
 import datetime
-import os
 from unittest import TestCase
 
 from gcloud.exceptions import NotFound
@@ -8,11 +7,11 @@ from googleapiclient import discovery
 from tenacity import retry, stop_after_delay, retry_if_result
 
 from cloudsql.ems_cloudsql_client import EmsCloudsqlClient, EmsCloudsqlClientError
+from tests.integration import GCP_PROJECT_ID
 
 
 class ItEmsCloudSqlClient(TestCase):
     CLIENT = None
-    GCP_PROJECT_ID = os.environ["GCP_PROJECT_ID"]
     GCP_CLOUDSQL_INSTANCE_ID = "ems-replenishment-dev"
     DATABASE = "ems-gcp-toolkit-test"
     DISCOVERY_SERVICE = discovery.build('sqladmin', 'v1beta4', cache_discovery=False)
@@ -21,7 +20,7 @@ class ItEmsCloudSqlClient(TestCase):
     JOB_TIMEOUT_SECONDS = 30
 
     def setUp(self):
-        self.storage_client = storage.Client(self.GCP_PROJECT_ID)
+        self.storage_client = storage.Client(GCP_PROJECT_ID)
         self.CLIENT = EmsCloudsqlClient("ems-data-platform-dev", self.GCP_CLOUDSQL_INSTANCE_ID)
 
     def __get_test_bucket(self, bucket_name):

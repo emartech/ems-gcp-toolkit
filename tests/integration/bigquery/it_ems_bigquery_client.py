@@ -20,13 +20,13 @@ from bigquery.job.ems_extract_job import EmsExtractJob
 from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
+from tests.integration import GCP_PROJECT_ID
 
 
 class ItEmsBigqueryClient(TestCase):
     ONE_DAY_IN_MS = 3600000 * 24
     GCP_BIGQUERY_CLIENT = None
     DATASET = None
-    GCP_PROJECT_ID = os.environ["GCP_PROJECT_ID"]
     DUMMY_QUERY = "SELECT 1 AS data"
     BAD_QUERY = "VERY BAD QUERY"
     INSERT_TEMPLATE = "INSERT INTO `{}` (int_data, str_data) VALUES (1, 'hello')"
@@ -35,7 +35,7 @@ class ItEmsBigqueryClient(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.GCP_BIGQUERY_CLIENT = bigquery.Client(cls.GCP_PROJECT_ID, location="EU")
+        cls.GCP_BIGQUERY_CLIENT = bigquery.Client(GCP_PROJECT_ID, location="EU")
         cls.DATASET = cls.__dataset()
         cls.__create_dataset_if_not_exists(cls.DATASET)
 
@@ -55,8 +55,8 @@ class ItEmsBigqueryClient(TestCase):
         self.__delete_if_exists(self.test_table)
         self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
 
-        self.client = EmsBigqueryClient(self.GCP_PROJECT_ID)
-        self.storage_client = storage.Client(self.GCP_PROJECT_ID)
+        self.client = EmsBigqueryClient(GCP_PROJECT_ID)
+        self.storage_client = storage.Client(GCP_PROJECT_ID)
 
     def __get_test_bucket(self, bucket_name):
 
@@ -88,7 +88,7 @@ class ItEmsBigqueryClient(TestCase):
 
         error_message = context.exception.args[0].lower()
         assert "not found" in error_message
-        assert self.GCP_PROJECT_ID in error_message
+        assert GCP_PROJECT_ID in error_message
         assert "non_existing_dataset" in error_message
 
     def test_run_sync_query_onExistingData(self):
@@ -165,7 +165,7 @@ class ItEmsBigqueryClient(TestCase):
     def test_get_job_list_returnsLoadJob(self):
         config = EmsLoadJobConfig({"fields": [{"name": "some_name", "type": "STRING"}]},
                                   "gs://some-non-existing-bucket-id/blob-id",
-                                  destination_project_id=self.GCP_PROJECT_ID,
+                                  destination_project_id=GCP_PROJECT_ID,
                                   destination_dataset="it_test_dataset",
                                   destination_table="some_table")
         min_creation_time = datetime.datetime.utcnow()
@@ -197,7 +197,7 @@ class ItEmsBigqueryClient(TestCase):
         self.client.run_sync_query(query)
         min_creation_time = datetime.datetime.utcnow()
 
-        bucket_name = self.GCP_PROJECT_ID + "-gcp-toolkit-it"
+        bucket_name = GCP_PROJECT_ID + "-gcp-toolkit-it"
         bucket = self.__get_test_bucket(bucket_name)
         blob_name = f'exported_{int(min_creation_time.timestamp())}.csv'
 
@@ -215,7 +215,7 @@ class ItEmsBigqueryClient(TestCase):
         self.client.run_sync_query(query)
         min_creation_time = datetime.datetime.utcnow()
 
-        bucket_name = self.GCP_PROJECT_ID + "-gcp-toolkit-it"
+        bucket_name = GCP_PROJECT_ID + "-gcp-toolkit-it"
         bucket = self.__get_test_bucket(bucket_name)
         blob_name = f'exported_{int(min_creation_time.timestamp())}.csv'
 
@@ -241,7 +241,7 @@ class ItEmsBigqueryClient(TestCase):
     def test_get_job_list_returnsAllKindOfJobs(self):
         load_config = EmsLoadJobConfig({"fields": [{"name": "some_name", "type": "STRING"}]},
                                        "gs://some-non-existing-bucket-id/blob-id",
-                                       destination_project_id=self.GCP_PROJECT_ID,
+                                       destination_project_id=GCP_PROJECT_ID,
                                        destination_dataset="it_test_dataset",
                                        destination_table="some_table")
         destination_uris = ["gs://some-non-existing-bucket-id/destination1"]
@@ -272,7 +272,7 @@ class ItEmsBigqueryClient(TestCase):
         blob.upload_from_string(f"apple,{random_quantity},True,1970-01-01T12:00:00.000Z\n")
         source_uri = f"gs://{bucket_name}/{blob_name}"
         config = EmsLoadJobConfig(source_uri_template=source_uri,
-                                  destination_project_id=self.GCP_PROJECT_ID,
+                                  destination_project_id=GCP_PROJECT_ID,
                                   destination_dataset=self.DATASET.dataset_id,
                                   destination_table="load_job_test",
                                   schema={"fields": [{"type": "STRING", "name": "fruit"},
@@ -301,7 +301,7 @@ class ItEmsBigqueryClient(TestCase):
         blob.upload_from_string(f"HEADER\nROW\n")
         source_uri = f"gs://{bucket_name}/{blob_name}"
         config = EmsLoadJobConfig(source_uri_template=source_uri,
-                                  destination_project_id=self.GCP_PROJECT_ID,
+                                  destination_project_id=GCP_PROJECT_ID,
                                   destination_dataset=self.DATASET.dataset_id,
                                   destination_table="load_job_test_skip_header",
                                   schema={"fields": [{"type": "STRING", "name": "COLUMN"}]},
@@ -328,11 +328,11 @@ class ItEmsBigqueryClient(TestCase):
         return self.GCP_BIGQUERY_CLIENT.get_job(job_id).state
 
     def __get_table_path(self):
-        return "{}.{}.{}".format(ItEmsBigqueryClient.GCP_PROJECT_ID, ItEmsBigqueryClient.DATASET.dataset_id,
+        return "{}.{}.{}".format(GCP_PROJECT_ID, self.DATASET.dataset_id,
                                  self.test_table.table_id)
 
     @classmethod
     def __dataset(cls):
-        dataset = Dataset(DatasetReference(cls.GCP_PROJECT_ID, "it_test_dataset"))
+        dataset = Dataset(DatasetReference(GCP_PROJECT_ID, "it_test_dataset"))
         dataset.default_table_expiration_ms = cls.ONE_DAY_IN_MS
         return dataset
