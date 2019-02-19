@@ -1,16 +1,10 @@
 from google.cloud import storage
 
-# from storage.ems_bucket import EmsBucket
-
 
 class EmsStorageClient:
     def __init__(self, project_id: str):
         self.project_id = project_id
         self.__client = storage.Client(project_id)
-
-    # def bucket(self, bucket_name: str) -> EmsBucket:
-    #     bucket = self.__client.bucket(bucket_name)
-    #     return EmsBucket(self, bucket)
 
     def download_lines(self, bucket_name: str, blob_name: str, num_lines: int, chunk_size: int=1024*1024) -> list:
         bucket = self.__client.bucket(bucket_name)
