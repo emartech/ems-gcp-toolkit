@@ -1,5 +1,3 @@
-from typing import Iterable
-
 from google.cloud import storage
 
 # from storage.ems_bucket import EmsBucket
@@ -14,7 +12,7 @@ class EmsStorageClient:
     #     bucket = self.__client.bucket(bucket_name)
     #     return EmsBucket(self, bucket)
 
-    def download_lines(self, bucket_name: str, blob_name: str, num_lines: int, chunk_size: int=1024*1024) -> Iterable:
+    def download_lines(self, bucket_name: str, blob_name: str, num_lines: int, chunk_size: int=1024*1024) -> list:
         bucket = self.__client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
         buffer = blob.download_as_string(start=0, end=chunk_size)

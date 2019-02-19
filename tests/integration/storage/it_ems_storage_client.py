@@ -9,7 +9,6 @@ from tests.integration import GCP_PROJECT_ID
 
 class ItEmsStorageClientTest(TestCase):
 
-
     @classmethod
     def setUpClass(cls):
         bucket_name = "it_test_ems_gcp_toolkit"
