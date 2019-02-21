@@ -1,7 +1,7 @@
 import datetime
 from unittest import TestCase
 
-from gcloud.exceptions import NotFound
+from google.cloud.exceptions import NotFound
 from google.cloud import storage
 from googleapiclient import discovery
 from tenacity import retry, stop_after_delay, retry_if_result
