@@ -3,9 +3,11 @@ SHELL=/bin/bash
 .DEFAULT_GOAL := build
 
 build: check test it-test ## Build package
+
+dist-build:
 	python setup.py sdist
 
-publish: build ## Publish package to PyPi
+publish: dist-build ## Publish package to PyPi
 	twine upload dist/*
 
 test: ## Run all tests
