@@ -2,7 +2,7 @@ SHELL=/bin/bash
 .PHONY: test publish build check
 .DEFAULT_GOAL := build
 
-build: check test  ## Build package
+build: check test it-test ## Build package
 	python setup.py sdist
 
 publish: build ## Publish package to PyPi
@@ -10,6 +10,8 @@ publish: build ## Publish package to PyPi
 
 test: ## Run all tests
 	python -m unittest
+
+it-test:
 	python -m unittest discover . "it_*.py"
 
 check:
