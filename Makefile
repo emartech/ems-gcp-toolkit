@@ -1,5 +1,6 @@
 SHELL=/bin/bash
 .PHONY: test publish build check
+.DEFAULT_GOAL := build
 
 build: check test  ## Build package
 	python setup.py sdist
