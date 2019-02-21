@@ -10,6 +10,7 @@ from cloudsql.ems_cloudsql_client import EmsCloudsqlClient, EmsCloudsqlClientErr
 from tests.integration import GCP_PROJECT_ID
 
 
+# TODO these are client tests, should be moved, here should be tests for importing, not creating tables, blobs, etc
 class ItEmsCloudSqlClient(TestCase):
     GCP_CLOUDSQL_INSTANCE_ID = "ems-replenishment-dev"
     DATABASE = "ems-gcp-toolkit-test"
