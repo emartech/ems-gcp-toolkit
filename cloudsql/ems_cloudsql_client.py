@@ -6,6 +6,7 @@ from google.cloud.storage import Bucket
 from googleapiclient import discovery
 from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed
 
+
 class EmsCloudsqlClient:
     IMPORT_CSV_TIMEOUT = 600
     RELOAD_TABLE_TIMEOUT = 600
