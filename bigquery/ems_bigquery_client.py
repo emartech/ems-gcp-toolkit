@@ -133,7 +133,7 @@ class EmsBigqueryClient:
         extract_job_config = ExtractJobConfig()
         extract_job_config.print_header = print_header
 
-        return self.__bigquery_client.extract_table(source=TableReference.from_string(full_table_id=table),
+        return self.__bigquery_client.extract_table(source=TableReference.from_string(table_id=table),
                                                     destination_uris=destination_uris,
                                                     job_id_prefix=job_id_prefix,
                                                     location=self.__location,
