@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 .PHONY: test publish build check
 
-build: ## Build package
+build: check test  ## Build package
 	python setup.py sdist
 
 publish: build ## Publish package to PyPi
@@ -13,6 +13,7 @@ test: ## Run all tests
 
 check:
 	pylint --rcfile=.pylintrc --output-format=colorized \
+		setup.py\
 		cloudsql \
 		tests/*/cloudsql \
 #		bigquery \
