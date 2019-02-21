@@ -6,19 +6,19 @@ from google.cloud.storage import Bucket
 from googleapiclient import discovery
 from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed
 
-
 class EmsCloudsqlClient:
     IMPORT_CSV_TIMEOUT = 600
     RELOAD_TABLE_TIMEOUT = 600
     CREATE_TMP_TABLE_TIMEOUT = 30
-    TEMP_BUCKET_LOCATION = "europe-west1"
 
-    def __init__(self, project_id: str, instance_id: str):
+    def __init__(self, project_id: str, instance_id: str, temp_bucket_name: str, temp_bucket_location: str):
         self.__project_id = project_id
-        self.__bucket_name = project_id + "-tmp-bucket"
+
+        self.__bucket_name = temp_bucket_name
         self.__instance_id = instance_id
-        self.__discovery_service = discovery.build('sqladmin', 'v1beta4', cache_discovery=False)
+        self.__discovery_service = discovery.build("sqladmin", "v1beta4", cache_discovery=False)
         self.__storage_client = storage.Client(project_id)
+        self.__temp_bucket_location = temp_bucket_location
 
     def load_table_from_blob(self, database: str, table_name: str, source_uri: str, import_user: str) -> None:
         tmp_table_name = self.__create_tmp_table_from(database, table_name, import_user)
@@ -35,15 +35,15 @@ class EmsCloudsqlClient:
 
     def __create_tmp_table_from(self, database: str, source_table: str, import_user: str) -> str:
         tmp_table = f"tmp_{source_table}"
-        sql_query = f"""DROP TABLE IF EXISTS  {tmp_table} ;
-            CREATE TABLE {tmp_table} AS SELECT * FROM {source_table} WHERE False;"""
+        sql_query = f'''DROP TABLE IF EXISTS  {tmp_table} ;
+            CREATE TABLE {tmp_table} AS SELECT * FROM {source_table} WHERE False;'''
         self.run_sql(database, sql_query, self.CREATE_TMP_TABLE_TIMEOUT, import_user)
         return tmp_table
 
     def __reload_table_from_tmp(self, database: str, source_table: str, destination_table: str, import_user) -> None:
-        sql_query = f"""TRUNCATE TABLE {destination_table};
+        sql_query = f'''TRUNCATE TABLE {destination_table};
             insert into {destination_table} select * from {source_table};
-            drop table {source_table};"""
+            drop table {source_table};'''
         self.run_sql(database, sql_query, self.RELOAD_TABLE_TIMEOUT, import_user)
 
     def __import_csv_from_bucket(self, database: str, destination_table_name: str, source_csv_uri: str,
@@ -85,7 +85,7 @@ class EmsCloudsqlClient:
             bucket = self.__storage_client.get_bucket(bucket_name)
         except NotFound:
             bucket = self.__storage_client.bucket(bucket_name)
-            bucket.location = self.TEMP_BUCKET_LOCATION
+            bucket.location = self.__temp_bucket_location
             bucket.storage_class = "REGIONAL"
             bucket.create()
         return bucket
@@ -110,5 +110,4 @@ class EmsCloudsqlClient:
 
 
 class EmsCloudsqlClientError(Exception):
-    def __init__(self, message):
-        super(EmsCloudsqlClientError, self).__init__(message)
+    pass
