@@ -61,7 +61,8 @@ confidence=
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=missing-docstring,
-        no-absolute-import
+        no-absolute-import,
+        fixme,
 
 
 # Enable the message, report, category or checker with the given id(s). You can
@@ -147,7 +148,7 @@ enable=c-extension-no-member,
         xreadlines-attribute,
         deprecated-sys-function,
         exception-escape,
-        comprehension-escape
+        comprehension-escape,
 
 
 
