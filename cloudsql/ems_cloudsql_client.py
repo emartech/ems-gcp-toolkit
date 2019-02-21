@@ -25,7 +25,7 @@ class EmsCloudsqlClient:
         self.__temp_bucket_location = temp_bucket_location
 
     # TODO should be renamed or moved to client code, it does too much
-    def load_table_from_blob(self, database: str, table_name: str, source_uri: str, import_user: str) -> None:
+    def reload_table_from_blob(self, database: str, table_name: str, source_uri: str, import_user: str) -> None:
         tmp_table_name = self.__create_tmp_table_from(database, table_name, import_user)
         self.__import_csv_from_bucket(database, tmp_table_name, source_uri, self.IMPORT_CSV_TIMEOUT)
         self.__reload_table_from_tmp(database, tmp_table_name, table_name, import_user)

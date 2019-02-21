@@ -41,7 +41,7 @@ class ItEmsCloudSqlClient(TestCase):
         with self.assertRaises(EmsCloudsqlClientError):
             table_name = "notexists"
             source_uri = self.__create_input_csv("2, foo\n")
-            self.__client.load_table_from_blob(self.DATABASE, table_name, source_uri, self.IMPORT_USER)
+            self.__client.reload_table_from_blob(self.DATABASE, table_name, source_uri, self.IMPORT_USER)
 
     def test_load_table_from_blob_overwritesTable(self):
         table_name = "existing"
@@ -50,7 +50,7 @@ class ItEmsCloudSqlClient(TestCase):
         content_to_load = "2, foo\n"
         source_uri = self.__create_input_csv(content_to_load)
 
-        self.__client.load_table_from_blob(self.DATABASE, table_name, source_uri, self.IMPORT_USER)
+        self.__client.reload_table_from_blob(self.DATABASE, table_name, source_uri, self.IMPORT_USER)
 
         loaded_data = self.__get_table_content(table_name)
         self.assertEqual(loaded_data, content_to_load)
