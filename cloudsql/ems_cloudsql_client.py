@@ -1,5 +1,6 @@
 import datetime
 import logging
+from collections import namedtuple
 
 from google.cloud.exceptions import NotFound
 from google.cloud import storage
@@ -9,20 +10,23 @@ from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed
 
 LOGGER = logging.getLogger(__name__)
 
+TempBucketDescriptor = namedtuple("TempBucketDescriptor", ["project_id", "name", "location"])
+
 
 class EmsCloudsqlClient:
     IMPORT_CSV_TIMEOUT = 600
     RELOAD_TABLE_TIMEOUT = 600
     CREATE_TMP_TABLE_TIMEOUT = 30
 
-    def __init__(self, project_id: str, instance_id: str, temp_bucket_name: str, temp_bucket_location: str):
+    # TODO Remove storage functionality ASAP
+    def __init__(self, project_id: str, instance_id: str, temp_bucket: TempBucketDescriptor):
         self.__project_id = project_id
 
-        self.__bucket_name = temp_bucket_name
+        self.__bucket_name = temp_bucket.name
         self.__instance_id = instance_id
         self.__discovery_service = discovery.build("sqladmin", "v1beta4", cache_discovery=False)
-        self.__storage_client = storage.Client(project_id)
-        self.__temp_bucket_location = temp_bucket_location
+        self.__storage_client = storage.Client(temp_bucket.project_id)
+        self.__temp_bucket_location = temp_bucket.location
 
     # TODO should be renamed or moved to client code, it does too much
     def reload_table_from_blob(self, database: str, table_name: str, source_uri: str, import_user: str) -> None:

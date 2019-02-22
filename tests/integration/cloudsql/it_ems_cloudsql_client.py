@@ -6,7 +6,7 @@ from google.cloud import storage
 from googleapiclient import discovery
 from tenacity import retry, stop_after_delay, retry_if_result
 
-from cloudsql.ems_cloudsql_client import EmsCloudsqlClient, EmsCloudsqlClientError
+from cloudsql.ems_cloudsql_client import EmsCloudsqlClient, EmsCloudsqlClientError, TempBucketDescriptor
 from tests.integration import GCP_PROJECT_ID
 
 
@@ -21,10 +21,18 @@ class ItEmsCloudSqlClient(TestCase):
 
     def setUp(self):
         self.__storage_client = storage.Client(GCP_PROJECT_ID)
+        temp_bucket = TempBucketDescriptor(
+            "ems-data-platform-dev",
+            self.GCP_CLOUDSQL_INSTANCE_ID + "-temp-bucket",
+            "europe-west1"
+        )
         self.__client = EmsCloudsqlClient("ems-data-platform-dev",
                                           self.GCP_CLOUDSQL_INSTANCE_ID,
-                                          self.GCP_CLOUDSQL_INSTANCE_ID + "-temp-bucket",
-                                          "europe-west1")
+                                          temp_bucket
+                                          # "ems-data-platform-dev",
+                                          # self.GCP_CLOUDSQL_INSTANCE_ID + "-temp-bucket",
+                                          # "europe-west1"
+                                          )
 
     def __get_test_bucket(self, bucket_name):
 
