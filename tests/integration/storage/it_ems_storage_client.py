@@ -86,3 +86,9 @@ class ItEmsStorageClientTest(TestCase):
         bucket = self.storage_client.bucket(IT_TEST_BUCKET)
         self.assertTrue(bucket.exists())
         self.bucket.blob("create_bucket_test_blob.txt").exists()
+
+    def test_delete_blob(self):
+        blob_name = "delete_blob_test_subject.txt"
+        self.bucket.blob(blob_name).upload_from_string("foo")
+        self.ems_client.delete_blob(IT_TEST_BUCKET, blob_name)
+        self.assertFalse(self.bucket.blob(blob_name).exists())

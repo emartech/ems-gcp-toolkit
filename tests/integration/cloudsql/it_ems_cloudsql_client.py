@@ -1,17 +1,16 @@
 import datetime
 from unittest import TestCase
 
-from google.cloud.exceptions import NotFound
 from google.cloud import storage
+from google.cloud.exceptions import NotFound
 from googleapiclient import discovery
-from tenacity import retry, stop_after_delay, retry_if_result
+from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed
 
-from cloudsql.ems_cloudsql_client import EmsCloudsqlClient, EmsCloudsqlClientError, TempBucketDescriptor
+from cloudsql.ems_cloudsql_client import EmsCloudsqlClient
 from tests.integration import GCP_PROJECT_ID
 
 
-# TODO these are client tests, should be moved, here should be tests for importing, not creating tables, blobs, etc
-class ItEmsCloudSqlClient(TestCase):
+class ItEmsCloudsqlClient(TestCase):
     GCP_CLOUDSQL_INSTANCE_ID = "ems-replenishment-dev"
     DATABASE = "ems-gcp-toolkit-test"
     DISCOVERY_SERVICE = discovery.build("sqladmin", "v1beta4", cache_discovery=False)
@@ -21,20 +20,39 @@ class ItEmsCloudSqlClient(TestCase):
 
     def setUp(self):
         self.__storage_client = storage.Client(GCP_PROJECT_ID)
-        temp_bucket = TempBucketDescriptor(
-            "ems-data-platform-dev",
-            self.GCP_CLOUDSQL_INSTANCE_ID + "-temp-bucket",
-            "europe-west1"
-        )
         self.__client = EmsCloudsqlClient("ems-data-platform-dev",
-                                          self.GCP_CLOUDSQL_INSTANCE_ID,
-                                          temp_bucket
-                                          # "ems-data-platform-dev",
-                                          # self.GCP_CLOUDSQL_INSTANCE_ID + "-temp-bucket",
-                                          # "europe-west1"
+                                          self.GCP_CLOUDSQL_INSTANCE_ID
                                           )
 
-    def __get_test_bucket(self, bucket_name):
+    def test_import_csv_from_bucket_importsData(self):
+        table_name = "testtable"
+        self.__drop_and_create_table(table_name)
+
+        csv_uri = self.__create_input_csv(f"1,alma\n")
+
+        self.__client.import_csv_from_bucket(self.DATABASE, table_name, csv_uri, self.JOB_TIMEOUT_SECONDS)
+
+        loaded_data = self.__get_table_content(table_name)
+        self.assertEqual(loaded_data, f"1,alma\n")
+
+    def test_import_sql_from_bucket_importsSql(self):
+        table_name = "existing"
+        content_to_load = f'''DROP TABLE IF EXISTS {table_name};
+                              CREATE TABLE {table_name} (id INTEGER PRIMARY KEY, name VARCHAR);
+                              INSERT INTO {table_name} VALUES (1, 'foo');'''
+        bucket = self.__get_test_bucket(self.BUCKET_NAME)
+        suffix = str(int(datetime.datetime.utcnow().timestamp()))
+        blob_name = f"input_{suffix}.csv"
+        blob = bucket.blob(blob_name)
+        blob.upload_from_string(content_to_load)
+        source_uri = f"gs://{self.BUCKET_NAME}/{blob_name}"
+
+        self.__client.import_sql_from_bucket(self.DATABASE, source_uri, 30, self.IMPORT_USER)
+
+        loaded_data = self.__get_table_content(table_name)
+        self.assertEqual(loaded_data, "1,foo\n")
+
+    def __get_test_bucket(self, bucket_name=BUCKET_NAME):
 
         try:
             bucket = self.__storage_client.get_bucket(bucket_name)
@@ -45,35 +63,37 @@ class ItEmsCloudSqlClient(TestCase):
             bucket.create()
         return bucket
 
-    def test_load_table_from_blob_throwsExceptionIfTableDoesNotExist(self):
-        with self.assertRaises(EmsCloudsqlClientError):
-            table_name = "notexists"
-            source_uri = self.__create_input_csv("2, foo\n")
-            self.__client.reload_table_from_blob(self.DATABASE, table_name, source_uri, self.IMPORT_USER)
+    # error cases:
+    # blob does not exist
+    # bucket does not exist
+    # import was unsuccessful
+    # delete temp blobs
 
-    def test_load_table_from_blob_overwritesTable(self):
-        table_name = "existing"
-        self.__create_table_with_dumy_values(table_name)
+    def __drop_and_create_table(self, table_name):
+        create_table_sql = f'''DROP TABLE IF EXISTS {table_name};
+                              CREATE TABLE {table_name} (id INTEGER PRIMARY KEY, name VARCHAR);'''
 
-        content_to_load = "2, foo\n"
-        source_uri = self.__create_input_csv(content_to_load)
+        blob_name = f"create_test_table.sql"
+        self.__get_test_bucket().blob(blob_name).upload_from_string(create_table_sql)
+        request_body = {
+            "importContext": {
+                "kind": "sql#importContext",
+                "fileType": "SQL",
+                "uri": "gs://" + self.BUCKET_NAME + "/" + blob_name,
+                "database": self.DATABASE,
+                "importUser": self.IMPORT_USER
+            }
+        }
+        request = self.DISCOVERY_SERVICE.instances().import_(project=GCP_PROJECT_ID,
+                                                             instance=self.GCP_CLOUDSQL_INSTANCE_ID,
+                                                             body=request_body)
+        self.__wait_for_job_done(request.execute()["name"])
 
-        self.__client.reload_table_from_blob(self.DATABASE, table_name, source_uri, self.IMPORT_USER)
-
-        loaded_data = self.__get_table_content(table_name)
-        self.assertEqual(loaded_data, content_to_load)
-
-    def __create_table_with_dumy_values(self, table_name):
-        self.__client.run_sql(self.DATABASE,
-                              f'''DROP TABLE IF EXISTS {table_name};
-                              CREATE TABLE {table_name} (id INTEGER PRIMARY KEY, name VARCHAR);
-                              INSERT INTO {table_name} VALUES (3, 'old foo'), (4, 'old bar');''',
-                              self.JOB_TIMEOUT_SECONDS,
-                              self.IMPORT_USER)
+        self.__get_test_bucket().blob(blob_name).delete()
 
     def __create_input_csv(self, content):
-        suffix = str(int(datetime.datetime.utcnow().timestamp()))
         bucket = self.__get_test_bucket(self.BUCKET_NAME)
+        suffix = str(int(datetime.datetime.utcnow().timestamp()))
         blob_name = f"input_{suffix}.csv"
         blob = bucket.blob(blob_name)
         blob.upload_from_string(content)
@@ -112,7 +132,8 @@ class ItEmsCloudSqlClient(TestCase):
         assert "error" not in status, f"Status: {status}"
 
     @retry(stop=(stop_after_delay(JOB_TIMEOUT_SECONDS)),
-           retry=(retry_if_result(lambda result: result["status"] != "DONE")))
+           retry=(retry_if_result(lambda result: result["status"] != "DONE")),
+           wait=wait_fixed(2))
     def __wait_for_job_done(self, ops_id):
         ops_request = self.DISCOVERY_SERVICE.operations().get(project=GCP_PROJECT_ID, operation=ops_id)
         ops_response = ops_request.execute()

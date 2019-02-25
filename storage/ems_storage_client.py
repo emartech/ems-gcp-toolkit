@@ -20,7 +20,17 @@ class EmsStorageClient:
         blob = bucket.blob(blob_name)
         blob.upload_from_string(content)
 
+    def download_content_as_string(self, bucket_name: str, blob_name: str):
+        bucket = self.__client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        return blob.download_as_string().decode("utf-8")
+
     def create_bucket_if_not_exists(self, bucket_name: str, project=None, location=None):
         bucket = self.__client.bucket(bucket_name)
         if not bucket.exists():
             bucket.create(project=project, location=location)
+
+    def delete_blob(self, bucket_name: str, blob_name: str):
+        bucket = self.__client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        blob.delete()
