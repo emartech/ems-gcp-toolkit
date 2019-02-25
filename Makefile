@@ -21,7 +21,8 @@ check:
 		setup.py\
 		cloudsql \
 		tests/*/cloudsql \
+		storage \
+		tests/*/storage \
 #		bigquery \
 #		pubsub \
-#		storage \
 #		tests \
