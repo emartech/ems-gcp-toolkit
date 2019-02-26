@@ -1,7 +1,8 @@
 import logging
 
 from googleapiclient import discovery
-from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed
+from googleapiclient.errors import HttpError
+from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed, retry_if_exception_type
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,14 +55,13 @@ class EmsCloudsqlClient:
                                                                body=request_body)
         self.__wait_for_job_done(request.execute()["name"], timeout_seconds)
 
-    # TODO should retry when HTTP 409, it means another operation is in progress
     # TODO should be implemented a public decorator for CloudSql discovery api calls
     def __wait_for_job_done(self, ops_id: str, timeout_seconds: float) -> None:
         LOGGER.info("Waiting for job %s to be done", ops_id)
 
         @retry(wait=wait_fixed(1),
-               stop=(stop_after_delay(timeout_seconds)),
-               retry=(retry_if_result(lambda result: result["status"] != "DONE")))
+               stop=stop_after_delay(timeout_seconds),
+               retry=retry_if_result(lambda result: result["status"] != "DONE") | retry_if_exception_type(HttpError))
         def __wait_for_job_done_helper() -> dict:
             ops_request = self.__discovery_service.operations().get(project=self.__project_id, operation=ops_id)
             ops_response = ops_request.execute()
