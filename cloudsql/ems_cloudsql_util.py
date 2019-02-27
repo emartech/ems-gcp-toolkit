@@ -44,22 +44,3 @@ class EmsCloudsqlUtil:
                                                        import_user=import_user)
         self.__storage_client.delete_blob(bucket_name=self.__temp_bucket.name,
                                           blob_name=blob_name)
-
-    def reload_table_from_blob(self, database: str, table_name: str, source_uri: str, import_user: str) -> None:
-        tmp_table_name = self.__create_tmp_table_from(database, table_name, import_user)
-        self.__cloud_sql_client.import_csv_from_bucket(database, tmp_table_name, source_uri, self.IMPORT_CSV_TIMEOUT)
-        self.__reload_table_from_tmp(database, tmp_table_name, table_name, import_user)
-
-    def __create_tmp_table_from(self, database: str, source_table: str, import_user: str) -> str:
-        tmp_table = f"tmp_{source_table}"
-        LOGGER.info("Creating tmp table %s in database %s with schema from table %s", tmp_table, database, source_table)
-        sql_query = f'''DROP TABLE IF EXISTS  {tmp_table} ;
-               CREATE TABLE {tmp_table} AS SELECT * FROM {source_table} WHERE False;'''
-        self.run_sql(database, sql_query, import_user, self.CREATE_TMP_TABLE_TIMEOUT)
-        return tmp_table
-
-    def __reload_table_from_tmp(self, database: str, source_table: str, destination_table: str, import_user) -> None:
-        sql_query = f'''TRUNCATE TABLE {destination_table};
-               insert into {destination_table} select * from {source_table};
-               drop table {source_table};'''
-        self.run_sql(database, sql_query, import_user, self.RELOAD_TABLE_TIMEOUT)

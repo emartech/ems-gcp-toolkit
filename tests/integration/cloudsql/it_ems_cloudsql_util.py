@@ -4,7 +4,7 @@ from unittest import TestCase
 from googleapiclient import discovery
 from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed
 
-from cloudsql.ems_cloudsql_client import EmsCloudsqlClient, EmsCloudsqlClientError
+from cloudsql.ems_cloudsql_client import EmsCloudsqlClient
 from cloudsql.ems_cloudsql_util import EmsCloudsqlUtil, TempBucketDescriptor
 from storage.ems_storage_client import EmsStorageClient
 from tests.integration import GCP_PROJECT_ID
@@ -50,24 +50,6 @@ class ItEmsCloudsqlUtil(TestCase):
         lines = self.__storage_client.download_lines(BUCKET_NAME, blob_name, num_lines=3)
         self.assertIn("3,old foo", lines)
         self.assertIn("4,old bar", lines)
-
-    def test_reload_table_from_blob_throwsExceptionIfTableDoesNotExist(self):
-        with self.assertRaises(EmsCloudsqlClientError):
-            table_name = "notexists"
-            source_uri = self.__create_input_csv("2, foo\n")
-            self.__util.reload_table_from_blob(DATABASE, table_name, source_uri, IMPORT_USER)
-
-    def test_reload_table_from_blob_overwritesTable(self):
-        table_name = "existing"
-        self.__create_table_with_dumy_values(table_name)
-
-        content_to_load = "2, foo\n"
-        source_uri = self.__create_input_csv(content_to_load)
-
-        self.__util.reload_table_from_blob(DATABASE, table_name, source_uri, IMPORT_USER)
-
-        loaded_data = self.__get_table_content(table_name)
-        self.assertEqual(loaded_data, content_to_load)
 
     def __get_table_content(self, table_name):
         suffix = str(int(datetime.datetime.utcnow().timestamp()))
