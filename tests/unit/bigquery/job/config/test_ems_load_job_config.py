@@ -39,43 +39,29 @@ class TestEmsLoadJobConfig(TestCase):
         self.assertEqual(self.ems_load_job_config.source_uri_template, "gs://bucket_id/{blob_id}")
 
     def test_destination_project_id_ifProjectIdIsNone_raisesValueError(self):
-        load_config = EmsLoadJobConfig(destination_project_id=None, schema=SCHEMA, source_uri_template="")
-
         with self.assertRaises(ValueError):
-            load_config.destination_project_id
+            EmsLoadJobConfig(destination_project_id=None, schema=SCHEMA, source_uri_template="")
 
     def test_destination_project_id_ifProjectIdIsEmptyString_raisesValueError(self):
-        load_config = EmsLoadJobConfig(destination_project_id="", schema=SCHEMA, source_uri_template="")
-
         with self.assertRaises(ValueError):
-            load_config.destination_project_id
+            EmsLoadJobConfig(destination_project_id="", schema=SCHEMA, source_uri_template="")
 
     def test_destination_project_id_ifProjectIdIsMultipleWhitespaces_raisesValueError(self):
-        load_config = EmsLoadJobConfig(destination_project_id="     \t  ", schema=SCHEMA, source_uri_template="")
-
         with self.assertRaises(ValueError):
-            load_config.destination_project_id
+            EmsLoadJobConfig(destination_project_id="     \t  ", schema=SCHEMA, source_uri_template="")
 
     def test_destination_dataset_ifDatasetIsNone_raisesValueError(self):
-        load_config = EmsLoadJobConfig(destination_dataset=None, schema=SCHEMA, source_uri_template="")
-
         with self.assertRaises(ValueError):
-            load_config.destination_dataset
+            EmsLoadJobConfig(destination_dataset=None, schema=SCHEMA, source_uri_template="")
 
     def test_destination_dataset_ifDatasetIsEmptyString_raisesValueError(self):
-        load_config = EmsLoadJobConfig(destination_dataset="", schema=SCHEMA, source_uri_template="")
-
         with self.assertRaises(ValueError):
-            load_config.destination_dataset
+            EmsLoadJobConfig(destination_dataset="", schema=SCHEMA, source_uri_template="")
 
     def test_destination_table_ifTableIsNone_raisesValueError(self):
-        load_config = EmsLoadJobConfig(destination_table=None, schema=SCHEMA, source_uri_template="")
-
         with self.assertRaises(ValueError):
-            load_config.destination_table
+            EmsLoadJobConfig(destination_table=None, schema=SCHEMA, source_uri_template="")
 
     def test_destination_table_ifTableIsEmptyString_raisesValueError(self):
-        load_config = EmsLoadJobConfig(destination_table="", schema=SCHEMA, source_uri_template="")
-
         with self.assertRaises(ValueError):
-            load_config.destination_table
+            EmsLoadJobConfig(destination_table="", schema=SCHEMA, source_uri_template="")

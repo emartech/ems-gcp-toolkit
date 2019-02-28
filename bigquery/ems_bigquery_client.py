@@ -117,7 +117,6 @@ class EmsBigqueryClient:
                                         job_id_prefix=job_id_prefix).job_id
 
     def run_async_load_job(self, job_id_prefix: str, config: EmsLoadJobConfig) -> str:
-        # TODO wrap into own error (do not let google exception to leak)
         return self.__bigquery_client.load_table_from_uri(source_uris=config.source_uri_template,
                                                           destination=TableReference(
                                                               DatasetReference(config.destination_project_id,
