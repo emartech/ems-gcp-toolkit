@@ -1,7 +1,7 @@
 import time
 from unittest import TestCase
 
-from google.api_core.exceptions import NotFound
+from google.api_core.exceptions import NotFound, AlreadyExists
 from google.cloud.pubsub_v1 import PublisherClient
 
 from pubsub.ems_publisher_client import EmsPublisherClient
@@ -13,12 +13,12 @@ class ItEmsPublisherClient(TestCase):
     def setUp(self):
         self.ems_client = EmsPublisherClient()
 
-    def test_topic_create(self):
+    def test_topic_create_if_not_exists_new_topic_creation(self):
         publisher = PublisherClient()
         expected_topic_name = self.generate_test_name("topic")
         expected_topic_path = publisher.api.topic_path(GCP_PROJECT_ID, expected_topic_name)
 
-        self.ems_client.topic_create(GCP_PROJECT_ID, expected_topic_name)
+        self.ems_client.topic_create_if_not_exists(GCP_PROJECT_ID, expected_topic_name)
 
         try:
             topic = publisher.api.get_topic(expected_topic_path)
@@ -26,6 +26,18 @@ class ItEmsPublisherClient(TestCase):
             self.fail(f"Topic not created with name {expected_topic_name}")
 
         self.assertEqual(topic.name, expected_topic_path)
+
+    def test_topic_create_if_not_exists_topic_already_created(self):
+        publisher = PublisherClient()
+        expected_topic_name = self.generate_test_name("topic")
+        publisher.api.topic_path(GCP_PROJECT_ID, expected_topic_name)
+
+        self.ems_client.topic_create_if_not_exists(GCP_PROJECT_ID, expected_topic_name)
+
+        try:
+            self.ems_client.topic_create_if_not_exists(GCP_PROJECT_ID, expected_topic_name)
+        except AlreadyExists:
+            self.fail(f"Topic already exists but tried to recreate with name {expected_topic_name}")
 
     def test_subscription_create(self):
         publisher = PublisherClient()
