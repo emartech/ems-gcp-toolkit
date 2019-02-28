@@ -30,6 +30,11 @@ class EmsStorageClient:
         if not bucket.exists():
             bucket.create(project=project, location=location)
 
+    def create_notification_if_not_exists(self, topic_name: str, bucket_name: str):
+        bucket = self.__client.bucket(bucket_name)
+        notification = bucket.notification(topic_name)
+        notification.create()
+
     def delete_blob(self, bucket_name: str, blob_name: str):
         bucket = self.__client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
