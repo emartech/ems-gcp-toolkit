@@ -35,3 +35,4 @@ typed-ast==1.1.0
 uritemplate==3.0.0
 urllib3==1.23
 wrapt==1.10.11
+pytest==4.3.0
