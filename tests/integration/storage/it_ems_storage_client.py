@@ -105,12 +105,20 @@ class ItEmsStorageClientTest(TestCase):
 
         self.assertNotificationListCount(1)
 
+    def test_create_notification_if_not_exists_notificationExistsDoNotCreateIt(self):
+        self.setupNotificationDependencies()
+
+        self.ems_storage_client.create_notification_if_not_exists(TOOLKIT_CREATED_TOPIC, TOOLKIT_CREATED_BUCKET)
+        self.ems_storage_client.create_notification_if_not_exists(TOOLKIT_CREATED_TOPIC, TOOLKIT_CREATED_BUCKET)
+
+        self.assertNotificationListCount(1)
+
     def assertNotificationListCount(self, count: int):
         result_notification_list = []
 
         for notification_item in self.storage_client.bucket(TOOLKIT_CREATED_BUCKET).list_notifications():
             result_notification_list.append(notification_item)
-        self.assertEqual(len(result_notification_list), count)
+        self.assertEqual(count, len(result_notification_list))
 
     def setupNotificationDependencies(self):
         self.ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, TOOLKIT_CREATED_TOPIC)
