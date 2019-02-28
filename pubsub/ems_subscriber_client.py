@@ -27,16 +27,17 @@ class EmsSubscriberClient:
     def pull(self,
              subscription: str,
              max_messages: int,
-             return_immediately: bool=None) -> Iterator[EmsMessage]:
-        messages = self.__client.pull(
+             return_immediately: bool = None) -> Iterator[EmsMessage]:
+        messages = self.__client.api.pull(
             subscription=subscription,
             max_messages=max_messages,
             return_immediately=return_immediately
         ).received_messages
 
+        # pylint: disable=map-builtin-not-iterating
         return map(lambda msg: EmsMessage(msg.ack_id, msg.message.data, msg.message.attributes), messages)
 
     def acknowledge(self,
                     subscription: str,
                     ack_ids: List[str]) -> None:
-        self.__client.acknowledge(subscription=subscription, ack_ids=ack_ids)
+        self.__client.api.acknowledge(subscription=subscription, ack_ids=ack_ids)

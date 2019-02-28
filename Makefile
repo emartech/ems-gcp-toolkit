@@ -23,6 +23,7 @@ check:
 		tests/*/cloudsql \
 		storage \
 		tests/*/storage \
+		pubsub \
+		tests/*/pubsub \
 #		bigquery \
-#		pubsub \
 #		tests \

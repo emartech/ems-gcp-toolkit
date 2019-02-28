@@ -5,11 +5,13 @@ from pubsub.ems_message import EmsMessage
 
 class TestEmsMessage(TestCase):
 
-    def test_dataIsParsedAsJson(self):
+    @staticmethod
+    def test_dataIsParsedAsJson():
+        # pylint: disable=invalid-string-quote
         message = EmsMessage("ackId", b'{"a":"v"}', dict())
 
         assert {"a": "v"} == message.data_json
 
-    def test_constructorWontThrowOnInvalidData(self):
+    @staticmethod
+    def test_constructorWontThrowOnInvalidData():
         EmsMessage("ackId", b"Invalid json", dict())
-
