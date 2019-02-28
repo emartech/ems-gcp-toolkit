@@ -14,7 +14,7 @@ class EmsPublisherClient:
 
     def topic_create_if_not_exists(self, project_id: str, topic_name: str):
         try:
-            self.__client.get_topic(self.__client.api.topic_path(project_id, topic_name))
+            self.__client.api.get_topic(self.__client.api.topic_path(project_id, topic_name))
         except NotFound:
             self.__client.api.create_topic(self.__client.api.topic_path(project_id, topic_name))
 

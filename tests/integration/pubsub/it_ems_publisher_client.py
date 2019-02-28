@@ -46,7 +46,7 @@ class ItEmsPublisherClient(TestCase):
         expected_subscription_list = ["projects/" + GCP_PROJECT_ID + "/subscriptions/" + expected_subscription_name]
         subscription_list = []
 
-        self.ems_client.topic_create(GCP_PROJECT_ID, expected_topic_name)
+        self.ems_client.topic_create_if_not_exists(GCP_PROJECT_ID, expected_topic_name)
         self.ems_client.subscription_create(GCP_PROJECT_ID, expected_topic_name, expected_subscription_name)
 
         try:

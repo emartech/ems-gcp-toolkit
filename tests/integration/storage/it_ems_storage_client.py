@@ -98,19 +98,24 @@ class ItEmsStorageClientTest(TestCase):
         self.ems_storage_client.delete_blob(IT_TEST_BUCKET, blob_name)
         self.assertFalse(self.bucket.blob(blob_name).exists())
 
-    def test_create_notification_if_not_exists_no_notificationExistsCreatesIt(self):
-        result_notification_list = []
-
-        self.ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, TOOLKIT_CREATED_TOPIC)
-        self.ems_storage_client.create_bucket_if_not_exists(TOOLKIT_CREATED_BUCKET)
-        self.cleanup_test_notifications()
+    def test_create_notification_if_not_exists_noNotificationExistsCreatesIt(self):
+        self.setupNotificationDependencies()
 
         self.ems_storage_client.create_notification_if_not_exists(TOOLKIT_CREATED_TOPIC, TOOLKIT_CREATED_BUCKET)
 
+        self.assertNotificationListCount(1)
+
+    def assertNotificationListCount(self, count: int):
+        result_notification_list = []
+
         for notification_item in self.storage_client.bucket(TOOLKIT_CREATED_BUCKET).list_notifications():
             result_notification_list.append(notification_item)
+        self.assertEqual(len(result_notification_list), count)
 
-        self.assertNotEqual(len(result_notification_list), 0)
+    def setupNotificationDependencies(self):
+        self.ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, TOOLKIT_CREATED_TOPIC)
+        self.ems_storage_client.create_bucket_if_not_exists(TOOLKIT_CREATED_BUCKET)
+        self.cleanup_test_notifications()
 
     def cleanup_test_notifications(self):
         for notification in self.storage_client.bucket(TOOLKIT_CREATED_BUCKET).list_notifications():
