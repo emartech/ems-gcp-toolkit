@@ -20,8 +20,16 @@ class ItEmsSubscriberClient(TestCase):
         expected_subscription_name = self.__generate_test_name("subscription")
 
         self.__ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, expected_topic_name)
-        self.__ems_subscriber_client.create_subscription_if_not_exists(GCP_PROJECT_ID, expected_topic_name, expected_subscription_name)
-        self.__ems_subscriber_client.create_subscription_if_not_exists(GCP_PROJECT_ID, expected_topic_name, expected_subscription_name)
+        self.__ems_subscriber_client.create_subscription_if_not_exists(
+            GCP_PROJECT_ID,
+            expected_topic_name,
+            expected_subscription_name
+        )
+        self.__ems_subscriber_client.create_subscription_if_not_exists(
+            GCP_PROJECT_ID,
+            expected_topic_name,
+            expected_subscription_name
+        )
 
         topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, expected_topic_name)
         subscriptions = list(self.__publisher_client.api.list_topic_subscriptions(topic_path))
@@ -33,7 +41,9 @@ class ItEmsSubscriberClient(TestCase):
         self.__delete_topic(expected_topic_name)
 
     def __delete_topic(self, expected_topic_name):
-        self.__publisher_client.api.delete_topic(self.__publisher_client.api.topic_path(GCP_PROJECT_ID, expected_topic_name))
+        self.__publisher_client.api.delete_topic(
+            self.__publisher_client.api.topic_path(GCP_PROJECT_ID, expected_topic_name)
+        )
 
     @staticmethod
     def __delete_subscription(subscription_name: str):
