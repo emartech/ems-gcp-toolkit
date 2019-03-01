@@ -1,6 +1,7 @@
 import time
 from unittest import TestCase
 
+from google.api_core.exceptions import NotFound, AlreadyExists
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 
 from pubsub.ems_publisher_client import EmsPublisherClient
@@ -14,42 +15,53 @@ class ItEmsSubscriberClient(TestCase):
         self.__ems_publisher_client = EmsPublisherClient()
         self.__ems_subscriber_client = EmsSubscriberClient()
         self.__publisher_client = PublisherClient()
+        self.__subscriber_client = SubscriberClient()
 
     def test_create_subscription_if_not_exists(self):
-        expected_topic_name = self.__generate_test_name("topic")
-        expected_subscription_name = self.__generate_test_name("subscription")
+        topic_name = self.__generate_test_name("topic")
+        subscription_name = self.__generate_test_name("subscription")
 
-        self.__ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, expected_topic_name)
-        self.__ems_subscriber_client.create_subscription_if_not_exists(
-            GCP_PROJECT_ID,
-            expected_topic_name,
-            expected_subscription_name
-        )
-        self.__ems_subscriber_client.create_subscription_if_not_exists(
-            GCP_PROJECT_ID,
-            expected_topic_name,
-            expected_subscription_name
-        )
+        self.__ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, topic_name)
+        self.__ems_subscriber_client.create_subscription_if_not_exists(GCP_PROJECT_ID, topic_name, subscription_name)
+        try:
+            self.__ems_subscriber_client.create_subscription_if_not_exists(GCP_PROJECT_ID, topic_name, subscription_name)
+        except AlreadyExists:
+            self.fail("create_subscription_if_not_exists raised AlreadyExists error")
 
-        topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, expected_topic_name)
-        subscriptions = list(self.__publisher_client.api.list_topic_subscriptions(topic_path))
+        topic_path = self.__publisher_client.topic_path(GCP_PROJECT_ID, topic_name)
+        subscriptions = list(self.__publisher_client.list_topic_subscriptions(topic_path))
 
-        expected_subscriptions = ["projects/" + GCP_PROJECT_ID + "/subscriptions/" + expected_subscription_name]
+        expected_subscriptions = ["projects/" + GCP_PROJECT_ID + "/subscriptions/" + subscription_name]
         self.assertEqual(expected_subscriptions, subscriptions)
 
-        self.__delete_subscription(expected_subscription_name)
-        self.__delete_topic(expected_topic_name)
+        self.__delete_subscription(subscription_name)
+        self.__delete_topic(topic_name)
 
-    def __delete_topic(self, expected_topic_name):
-        self.__publisher_client.api.delete_topic(
-            self.__publisher_client.api.topic_path(GCP_PROJECT_ID, expected_topic_name)
-        )
+    def test_delete_subscription_if_exists(self):
+        topic_name = self.__generate_test_name("topic")
+        subscription_name = self.__generate_test_name("subscription")
 
-    @staticmethod
-    def __delete_subscription(subscription_name: str):
-        subscriber = SubscriberClient()
-        subscription_path = subscriber.api.subscription_path(GCP_PROJECT_ID, subscription_name)
-        subscriber.api.delete_subscription(subscription_path)
+        self.__ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, topic_name)
+        self.__ems_subscriber_client.create_subscription_if_not_exists( GCP_PROJECT_ID, topic_name, subscription_name)
+        self.__ems_subscriber_client.delete_subscription_if_exists(GCP_PROJECT_ID, subscription_name)
+        try:
+            self.__ems_subscriber_client.delete_subscription_if_exists(GCP_PROJECT_ID, subscription_name)
+        except NotFound:
+            self.fail("delete_subscription_if_exists raised NotFound error")
+
+        subscription_path = self.__subscriber_client.subscription_path(GCP_PROJECT_ID, subscription_name)
+        with self.assertRaises(NotFound):
+            self.__subscriber_client.get_subscription(subscription_path)
+
+        self.__delete_topic(topic_name)
+
+    def __delete_topic(self, topic_name):
+        topic_path = self.__publisher_client.topic_path(GCP_PROJECT_ID, topic_name)
+        self.__publisher_client.delete_topic(topic_path)
+
+    def __delete_subscription(self, subscription_name: str):
+        subscription_path = self.__subscriber_client.subscription_path(GCP_PROJECT_ID, subscription_name)
+        self.__subscriber_client.delete_subscription(subscription_path)
 
     @staticmethod
     def __generate_test_name(context: str):
