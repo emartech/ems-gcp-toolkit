@@ -47,10 +47,10 @@ class EmsSubscriberClient:
         self.__client.api.acknowledge(subscription=subscription, ack_ids=ack_ids)
 
     def create_subscription_if_not_exists(self, project_id: str, topic_name: str, subscription_name: str):
-        topic_path = self.__client.topic_path(project_id, topic_name)
-        subscription_path = self.__client.subscription_path(project_id, subscription_name)
+        topic_path = self.__client.api.topic_path(project_id, topic_name)
+        subscription_path = self.__client.api.subscription_path(project_id, subscription_name)
         try:
-            self.__client.create_subscription(subscription_path, topic_path)
+            self.__client.api.create_subscription(subscription_path, topic_path)
             LOGGER.info("Subscription %s created for topic %s in project %s",
                         subscription_name, topic_name, project_id)
         except AlreadyExists:
@@ -58,9 +58,9 @@ class EmsSubscriberClient:
                         subscription_name, topic_name, project_id)
 
     def delete_subscription_if_exists(self, project_id: str, subscription_name: str):
-        subscription_path = self.__client.subscription_path(project_id, subscription_name)
+        subscription_path = self.__client.api.subscription_path(project_id, subscription_name)
         try:
-            self.__client.delete_subscription(subscription_path)
+            self.__client.api.delete_subscription(subscription_path)
             LOGGER.info("Subscription %s deleted in project %s", subscription_name, project_id)
         except NotFound:
             LOGGER.info("Subscription %s not found in project %s", subscription_name, project_id)

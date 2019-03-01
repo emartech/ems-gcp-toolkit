@@ -16,17 +16,17 @@ class EmsPublisherClient:
         return self.__client.publish(topic=topic, data=data, **attrs)
 
     def topic_create_if_not_exists(self, project_id: str, topic_name: str):
-        topic_path = self.__client.topic_path(project_id, topic_name)
+        topic_path = self.__client.api.topic_path(project_id, topic_name)
         try:
-            self.__client.create_topic(topic_path)
-            LOGGER.info("Topic %s created in project %qs", topic_name, project_id)
+            self.__client.api.create_topic(topic_path)
+            LOGGER.info("Topic %s created in project %s", topic_name, project_id)
         except AlreadyExists:
             LOGGER.info("Topic %s already exists in project %s", topic_name, project_id)
 
     def delete_topic_if_exists(self, project_id: str, topic_name: str):
-        topic_path = self.__client.topic_path(project_id, topic_name)
+        topic_path = self.__client.api.topic_path(project_id, topic_name)
         try:
-            self.__client.delete_topic(topic_path)
+            self.__client.api.delete_topic(topic_path)
             LOGGER.info("Topic %s deleted in project %s", topic_name, project_id)
         except NotFound:
             LOGGER.info("Topic %s not found in project %s", topic_name, project_id)

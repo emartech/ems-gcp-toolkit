@@ -78,19 +78,19 @@ class ItEmsPublisherClient(TestCase):
         except NotFound:
             self.fail("delete_topic_if_exists raised NotFound error")
 
-        topic_path = self.__publisher_client.topic_path(GCP_PROJECT_ID, topic_name)
+        topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, topic_name)
         with self.assertRaises(NotFound):
-            self.__publisher_client.get_topic(topic_path)
+            self.__publisher_client.api.get_topic(topic_path)
 
     def __delete_topic(self, topic_name):
-        topic_path = self.__publisher_client.topic_path(GCP_PROJECT_ID, topic_name)
-        self.__publisher_client.delete_topic(topic_path)
+        topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, topic_name)
+        self.__publisher_client.api.delete_topic(topic_path)
 
     @staticmethod
     def __delete_subscription(subscription_name: str):
         subscriber_client = SubscriberClient()
-        subscription_path = subscriber_client.subscription_path(GCP_PROJECT_ID, subscription_name)
-        subscriber_client.delete_subscription(subscription_path)
+        subscription_path = subscriber_client.api.subscription_path(GCP_PROJECT_ID, subscription_name)
+        subscriber_client.api.delete_subscription(subscription_path)
 
     @staticmethod
     def __generate_test_name(context: str):
