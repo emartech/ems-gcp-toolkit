@@ -33,15 +33,22 @@ class EmsStorageClient:
     def create_notification_if_not_exists(self, topic_name: str, bucket_name: str):
         bucket = self.__client.bucket(bucket_name)
 
-        if not self.is_notification_exists(bucket):
+        if not self.is_notification_exists(bucket, topic_name):
             bucket.notification(topic_name).create()
 
+    def delete_notification_if_exists(self, topic_name: str, bucket_name: str):
+        bucket = self.__client.bucket(bucket_name)
+
+        for notification in bucket.list_notifications():
+            if notification.topic_name == topic_name:
+                notification.delete()
+
     @staticmethod
-    def is_notification_exists(bucket):
-        notification_count = 0
-        for _ in bucket.list_notifications():
-            notification_count += 1
-        return notification_count > 0
+    def is_notification_exists(bucket, topic_name):
+        for notification in bucket.list_notifications():
+            if notification.topic_name == topic_name:
+                return True
+        return False
 
     def delete_blob(self, bucket_name: str, blob_name: str):
         bucket = self.__client.bucket(bucket_name)
