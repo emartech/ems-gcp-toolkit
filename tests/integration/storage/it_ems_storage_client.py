@@ -2,6 +2,7 @@ import random
 import time
 from unittest import TestCase
 
+from google.api_core.exceptions import NotFound
 from google.cloud import storage
 
 from pubsub.ems_publisher_client import EmsPublisherClient
@@ -23,8 +24,8 @@ class ItEmsStorageClientTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.storage_client = storage.Client(GCP_PROJECT_ID)
-        bucket = cls.storage_client.bucket(IT_TEST_BUCKET)
+        cls.__storage_client = storage.Client(GCP_PROJECT_ID)
+        bucket = cls.__storage_client.bucket(IT_TEST_BUCKET)
         if not bucket.exists():
             bucket.location = "europe-west1"
             bucket.storage_class = "REGIONAL"
@@ -35,7 +36,7 @@ class ItEmsStorageClientTest(TestCase):
     @classmethod
     def tearDownClass(cls):
         bucket_name = TOOLKIT_CREATED_BUCKET
-        bucket = cls.storage_client.bucket(bucket_name)
+        bucket = cls.__storage_client.bucket(bucket_name)
         if bucket.exists():
             bucket.delete(force=True)
 
@@ -81,7 +82,7 @@ class ItEmsStorageClientTest(TestCase):
         self.__ems_storage_client.create_bucket_if_not_exists(TOOLKIT_CREATED_BUCKET, project=GCP_PROJECT_ID,
                                                               location="europe-west1")
 
-        bucket = self.storage_client.bucket(TOOLKIT_CREATED_BUCKET)
+        bucket = self.__storage_client.bucket(TOOLKIT_CREATED_BUCKET)
         self.assertTrue(bucket.exists())
 
     def test_create_bucket_if_not_exists_doesNothingIfExists(self):
@@ -89,9 +90,36 @@ class ItEmsStorageClientTest(TestCase):
         self.__ems_storage_client.create_bucket_if_not_exists(IT_TEST_BUCKET, project=GCP_PROJECT_ID,
                                                               location="europe-west1")
 
-        bucket = self.storage_client.bucket(IT_TEST_BUCKET)
+        bucket = self.__storage_client.bucket(IT_TEST_BUCKET)
         self.assertTrue(bucket.exists())
         self.bucket.blob("create_bucket_test_blob.txt").exists()
+
+    def test_delete_bucket_if_exists_DeletesEmptyBucket(self):
+        bucket_name = self.__generate_test_name("bucket")
+        self.__ems_storage_client.create_bucket_if_not_exists(bucket_name, GCP_PROJECT_ID, "europe-west1")
+
+        self.__ems_storage_client.delete_bucket_if_exists(bucket_name)
+
+        bucket = self.__storage_client.bucket(bucket_name)
+        self.assertFalse(bucket.exists())
+
+    def test_delete_bucket_if_exists_DeletesNotExistingBucket(self):
+        bucket_name = self.__generate_test_name("bucket")
+
+        try:
+            self.__ems_storage_client.delete_bucket_if_exists(bucket_name)
+        except NotFound:
+            self.fail("Should not throw exception if bucket is not exist")
+
+    def test_delete_bucket_if_exists_DeletesNotEmptyBucket(self):
+        bucket_name = self.__generate_test_name("bucket")
+        self.__ems_storage_client.create_bucket_if_not_exists(bucket_name, GCP_PROJECT_ID, "europe-west1")
+        self.__ems_storage_client.upload_from_string(bucket_name, "test.txt", "ok")
+
+        self.__ems_storage_client.delete_bucket_if_exists(bucket_name, force=True)
+
+        bucket = self.__storage_client.bucket(bucket_name)
+        self.assertFalse(bucket.exists())
 
     def test_delete_blob(self):
         blob_name = "delete_blob_test_subject.txt"
@@ -104,7 +132,7 @@ class ItEmsStorageClientTest(TestCase):
 
         self.__ems_storage_client.create_notification_if_not_exists(topic_name, bucket_name)
 
-        notification_list = self.storage_client.bucket(bucket_name).list_notifications()
+        notification_list = self.__storage_client.bucket(bucket_name).list_notifications()
         self.assertEqual(1, len(list(notification_list)))
 
         self.__cleanup([topic_name], bucket_name)
@@ -115,7 +143,7 @@ class ItEmsStorageClientTest(TestCase):
         self.__ems_storage_client.create_notification_if_not_exists(topic_name, bucket_name)
         self.__ems_storage_client.create_notification_if_not_exists(topic_name, bucket_name)
 
-        notification_list = self.storage_client.bucket(bucket_name).list_notifications()
+        notification_list = self.__storage_client.bucket(bucket_name).list_notifications()
         self.assertEqual(1, len(list(notification_list)))
 
         self.__cleanup([topic_name], bucket_name)
@@ -128,7 +156,7 @@ class ItEmsStorageClientTest(TestCase):
 
         self.__ems_storage_client.create_notification_if_not_exists(topic_name, bucket_name)
 
-        notification_list = self.storage_client.bucket(bucket_name).list_notifications()
+        notification_list = self.__storage_client.bucket(bucket_name).list_notifications()
         self.assertEqual(2, len(list(notification_list)))
 
         self.__cleanup([topic_name, topic_name_other], bucket_name)
@@ -139,7 +167,7 @@ class ItEmsStorageClientTest(TestCase):
 
         self.__ems_storage_client.delete_notification_if_exists(topic_name, bucket_name)
 
-        notification_list = self.storage_client.bucket(bucket_name).list_notifications()
+        notification_list = self.__storage_client.bucket(bucket_name).list_notifications()
         self.assertEqual(0, len(list(notification_list)))
 
         self.__cleanup([topic_name], bucket_name)
@@ -149,7 +177,7 @@ class ItEmsStorageClientTest(TestCase):
 
         self.__ems_storage_client.delete_notification_if_exists(topic_name, bucket_name)
 
-        notification_list = self.storage_client.bucket(bucket_name).list_notifications()
+        notification_list = self.__storage_client.bucket(bucket_name).list_notifications()
         self.assertEqual(0, len(list(notification_list)))
 
         self.__cleanup([topic_name], bucket_name)
@@ -163,7 +191,7 @@ class ItEmsStorageClientTest(TestCase):
 
         self.__ems_storage_client.delete_notification_if_exists(topic_name, bucket_name)
 
-        notification_list = self.storage_client.bucket(bucket_name).list_notifications()
+        notification_list = self.__storage_client.bucket(bucket_name).list_notifications()
         self.assertEqual(1, len(list(notification_list)))
 
         self.__cleanup([topic_name, topic_name_other], bucket_name)
@@ -178,7 +206,7 @@ class ItEmsStorageClientTest(TestCase):
     def __cleanup(self, topic_names, bucket_name):
         for topic_name in topic_names:
             self.__ems_publisher_client.delete_topic_if_exists(GCP_PROJECT_ID, topic_name)
-        bucket = self.storage_client.bucket(bucket_name)
+        bucket = self.__storage_client.bucket(bucket_name)
         if bucket.exists():
             bucket.delete(force=True)
 
