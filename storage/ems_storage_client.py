@@ -1,4 +1,5 @@
 from google.cloud import storage
+from google.cloud.storage.notification import JSON_API_V1_PAYLOAD_FORMAT
 
 
 class EmsStorageClient:
@@ -39,7 +40,7 @@ class EmsStorageClient:
         bucket = self.__client.bucket(bucket_name)
 
         if not self.is_notification_exists(bucket, topic_name):
-            bucket.notification(topic_name).create()
+            bucket.notification(topic_name, payload_format=JSON_API_V1_PAYLOAD_FORMAT).create()
 
     def delete_notification_if_exists(self, topic_name: str, bucket_name: str):
         bucket = self.__client.bucket(bucket_name)
