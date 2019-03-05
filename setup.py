@@ -10,7 +10,7 @@ setup(
     author_email="",
     description="",
     install_requires=[
-        "google-cloud-bigquery==1.5.0",
-        "google-cloud-pubsub==0.38.0"
+        "google-cloud-bigquery>=1.9.0",
+        "google-cloud-pubsub>=0.38.0"
     ],
 )
