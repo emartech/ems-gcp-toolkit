@@ -4,7 +4,7 @@ from collections import Iterable
 from datetime import datetime
 from typing import List
 
-from google.api_core.exceptions import GoogleAPIError, NotFound
+from google.api_core.exceptions import GoogleAPIError, NotFound, Conflict
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
     LoadJobConfig, LoadJob, ExtractJobConfig, ExtractJob
@@ -19,7 +19,7 @@ from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 RETRY = "-retry-"
 
@@ -29,6 +29,28 @@ class EmsBigqueryClient:
         self.__project_id = project_id
         self.__bigquery_client = bigquery.Client(project_id)
         self.__location = location
+
+    def dataset_exists(self, dataset_id: str):
+        try:
+            self.__bigquery_client.get_dataset(dataset_id)
+        except NotFound:
+            return False
+        return True
+
+    def create_dataset_if_not_exists(self, dataset_id: str):
+        dataset = self.__bigquery_client.dataset(dataset_id, self.__project_id)
+        try:
+            self.__bigquery_client.create_dataset(dataset)
+            LOGGER.info("Dataset %s created in project %s", dataset_id, self.__project_id)
+        except Conflict:
+            LOGGER.info("Dataset %s already exists in project %s", dataset_id, self.__project_id)
+
+    def delete_dataset_if_exists(self, dataset_id: str, delete_contents=False):
+        try:
+            self.__bigquery_client.delete_dataset(dataset_id, delete_contents)
+            LOGGER.info("Dataset %s deleted in project %s", dataset_id, self.__project_id)
+        except NotFound:
+            LOGGER.info("Dataset %s not found in project %s", dataset_id, self.__project_id)
 
     def table_exists(self, table: str) -> bool:
         try:
@@ -143,7 +165,7 @@ class EmsBigqueryClient:
                        ems_query_job_config: EmsQueryJobConfig = EmsQueryJobConfig(priority=EmsJobPriority.INTERACTIVE),
                        job_id_prefix: str = None
                        ) -> Iterable:
-        logger.info("Sync query executed with priority: %s", ems_query_job_config.priority)
+        LOGGER.info("Sync query executed with priority: %s", ems_query_job_config.priority)
         try:
             return self.__get_mapped_iterator(
                 self.__execute_query_job(

@@ -1,14 +1,13 @@
 import datetime
-import os
 import random
+import time
 import uuid
 from unittest import TestCase
 
-from google.api_core.exceptions import NotFound
+from google.api_core.exceptions import NotFound, Conflict
 from google.cloud import bigquery
 from google.cloud import storage
 from google.cloud.bigquery import Dataset, DatasetReference, Table, TableReference, SchemaField, TimePartitioning
-from google.cloud.exceptions import Conflict
 from tenacity import retry, stop_after_delay, retry_if_result
 
 from bigquery.ems_api_error import EmsApiError
@@ -48,15 +47,18 @@ class ItEmsBigqueryClient(TestCase):
 
     def setUp(self):
         table_name = "test_table_" + str(int(datetime.datetime.utcnow().timestamp() * 1000))
-        table_schema = [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")]
-        self.table_reference = TableReference(self.DATASET.reference, table_name)
-        self.test_table = Table(self.table_reference, table_schema)
-        self.test_table.time_partitioning = TimePartitioning("DAY")
-        self.__delete_if_exists(self.test_table)
-        self.GCP_BIGQUERY_CLIENT.create_table(self.test_table)
-
+        self.test_table  = self.__create_test_table(table_name, self.DATASET.reference)
         self.client = EmsBigqueryClient(GCP_PROJECT_ID)
         self.storage_client = storage.Client(GCP_PROJECT_ID)
+
+    def __create_test_table(self, table_name, dataset_id):
+        table_schema = [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")]
+        table_reference = TableReference(dataset_id, table_name)
+        test_table = Table(table_reference, table_schema)
+        test_table.time_partitioning = TimePartitioning("DAY")
+        self.__delete_if_exists(test_table)
+        self.GCP_BIGQUERY_CLIENT.create_table(test_table)
+        return test_table
 
     def __get_test_bucket(self, bucket_name):
 
@@ -319,6 +321,65 @@ class ItEmsBigqueryClient(TestCase):
         expected = [{"COLUMN": "ROW"}]
         self.assertEquals(expected, list(result))
 
+    def test_dataset_exists_WhenDatasetNotExists(self):
+        dataset_id = self.__generate_test_name("dataset")
+
+        self.assertFalse(self.client.dataset_exists(dataset_id))
+
+    def test_dataset_exists_WhenDatasetExists(self):
+        dataset_id = self.__generate_test_name("dataset")
+        self.client.create_dataset_if_not_exists(dataset_id)
+
+        self.assertTrue(self.client.dataset_exists(dataset_id))
+
+        self.client.delete_dataset_if_exists(dataset_id)
+
+    def test_create_dataset_if_not_exists_CreatesDataset(self):
+        dataset_id = self.__generate_test_name("dataset")
+
+        self.client.create_dataset_if_not_exists(dataset_id)
+
+        self.assertTrue(self.client.dataset_exists(dataset_id))
+
+        self.client.delete_dataset_if_exists(dataset_id)
+
+    def test_create_dataset_if_not_exists_DoesNotRaiseExceptionWhenAlreadyExists(self):
+        dataset_id = self.__generate_test_name("dataset")
+
+        self.client.create_dataset_if_not_exists(dataset_id)
+        try:
+            self.client.create_dataset_if_not_exists(dataset_id)
+        except Conflict:
+            self.fail("create_dataset_if_not_exists raised AlreadyExists error")
+
+        self.client.delete_dataset_if_exists(dataset_id)
+
+    def test_delete_dataset_if_exists_WhenItIsEmpty(self):
+        dataset_id = self.__generate_test_name("dataset")
+        self.client.create_dataset_if_not_exists(dataset_id)
+
+        self.client.delete_dataset_if_exists(dataset_id)
+
+        self.assertFalse(self.client.dataset_exists(dataset_id))
+
+    def test_delete_dataset_if_exists_WhenItIsNotEmpty(self):
+        dataset_id = self.__generate_test_name("dataset")
+        table_name = self.__generate_test_name("table")
+        self.client.create_dataset_if_not_exists(dataset_id)
+        self.__create_test_table(table_name, Dataset(DatasetReference(GCP_PROJECT_ID, dataset_id)).reference)
+
+        self.client.delete_dataset_if_exists(dataset_id, delete_contents=True)
+
+        self.assertFalse(self.client.dataset_exists(dataset_id))
+
+    def test_delete_dataset_DoesNotRaiseExceptionWhenNotExists(self):
+        dataset_id = self.__generate_test_name("dataset")
+
+        try:
+            self.client.delete_dataset_if_exists(dataset_id)
+        except NotFound:
+            self.fail("delete_dataset_if_exists raised NotFound error")
+
     @retry(stop=(stop_after_delay(10)))
     def __wait_for_job_submitted(self, job_id):
         self.GCP_BIGQUERY_CLIENT.get_job(job_id)
@@ -336,3 +397,7 @@ class ItEmsBigqueryClient(TestCase):
         dataset = Dataset(DatasetReference(GCP_PROJECT_ID, "it_test_dataset"))
         dataset.default_table_expiration_ms = cls.ONE_DAY_IN_MS
         return dataset
+
+    @staticmethod
+    def __generate_test_name(context: str):
+        return "test_" + context + "_" + str(int(time.time()))
