@@ -39,7 +39,7 @@ class TestEmsBigqueryClient(TestCase):
 
         result_job_id = ems_bigquery_client.run_async_query(self.QUERY, ems_query_job_config=self.query_config)
 
-        bigquery_module_patch.Client.assert_called_once_with("some-project-id")
+        bigquery_module_patch.Client.assert_called_once_with("some-project-id", location="EU")
         arguments = self.client_mock.query.call_args_list[0][1]
         assert arguments["query"] == self.QUERY
         assert arguments["location"] == "EU"
@@ -56,7 +56,7 @@ class TestEmsBigqueryClient(TestCase):
 
         ems_bigquery_client.run_async_query(self.QUERY, ems_query_job_config=query_config)
 
-        bigquery_module_patch.Client.assert_called_once_with("some-project-id")
+        bigquery_module_patch.Client.assert_called_once_with("some-project-id", location="EU")
         arguments = self.client_mock.query.call_args_list[0][1]
         self.assertEqual(arguments["job_config"].destination.project, "some-project-id")
 
