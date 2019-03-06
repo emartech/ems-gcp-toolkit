@@ -27,7 +27,7 @@ RETRY = "-retry-"
 class EmsBigqueryClient:
     def __init__(self, project_id: str, location: str = "EU"):
         self.__project_id = project_id
-        self.__bigquery_client = bigquery.Client(project_id)
+        self.__bigquery_client = bigquery.Client(project_id, location=location)
         self.__location = location
 
     def dataset_exists(self, dataset_id: str):
