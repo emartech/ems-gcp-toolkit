@@ -18,6 +18,14 @@ class EmsCloudsqlClient:
         self.__instance_id = instance_id
         self.__discovery_service = discovery.build("sqladmin", "v1beta4", cache_discovery=False)
 
+    @property
+    def project_id(self) -> str:
+        return self.__project_id
+
+    @property
+    def instance_id(self) -> str:
+        return self.__instance_id
+
     def import_csv_from_bucket(self, database: str, destination_table_name: str, source_csv_uri: str,
                                timeout_seconds: float) -> None:
         LOGGER.info("Importing CSV from %s to table %s in database %s",
