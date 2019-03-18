@@ -30,6 +30,14 @@ class EmsBigqueryClient:
         self.__bigquery_client = bigquery.Client(project_id, location=location)
         self.__location = location
 
+    @property
+    def project_id(self) -> str:
+        return self.__project_id
+
+    @property
+    def location(self) -> str:
+        return self.__location
+
     def dataset_exists(self, dataset_id: str):
         try:
             self.__bigquery_client.get_dataset(dataset_id)

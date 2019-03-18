@@ -34,6 +34,12 @@ class TestEmsBigqueryClient(TestCase):
                                               destination_dataset="some_dataset",
                                               destination_table="some_table")
 
+    def test_properties(self, bigquery_module_patch: bigquery):
+        ems_bigquery_client = self.__setup_client(bigquery_module_patch, None, "valhalla")
+
+        self.assertEqual(ems_bigquery_client.project_id, "some-project-id")
+        self.assertEqual(ems_bigquery_client.location, "valhalla")
+
     def test_run_async_query_submitsBatchQueryAndReturnsJobId(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch)
 
@@ -380,6 +386,7 @@ class TestEmsBigqueryClient(TestCase):
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
         project_id = "some-project-id"
         bigquery_module_patch.Client.return_value = self.client_mock
+        self.client_mock.project = "some-project-id"
         self.client_mock.query.return_value = self.query_job_mock
         self.query_job_mock.job_id = self.JOB_ID
         if location is not None:
