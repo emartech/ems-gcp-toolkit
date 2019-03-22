@@ -14,7 +14,7 @@ test: ## Run all tests
 	py.test -o python_files="test_*.py"
 
 it-test:
-	py.test -o python_files="it_*.py" --disable-warnings
+	py.test -o python_files="it_*.py" --disable-warnings -x
 
 check:
 	pylint --rcfile=.pylintrc --output-format=colorized \
