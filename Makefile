@@ -11,10 +11,10 @@ publish: dist-build ## Publish package to PyPi
 	twine upload dist/*
 
 test: ## Run all tests
-	python -m unittest
+	py.test -o python_files="test_*.py"
 
 it-test:
-	python -m unittest discover . "it_*.py"
+	py.test -o python_files="it_*.py" --disable-warnings
 
 check:
 	pylint --rcfile=.pylintrc --output-format=colorized \
