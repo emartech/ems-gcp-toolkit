@@ -8,8 +8,8 @@ from cloudsql.ems_cloudsql_client import EmsCloudsqlClient
 from cloudsql.ems_cloudsql_util import EmsCloudsqlUtil, TempBucketDescriptor
 from storage.ems_storage_client import EmsStorageClient
 from tests.integration import GCP_PROJECT_ID
+from tests.integration import GCP_CLOUDSQL_INSTANCE_ID
 
-GCP_CLOUDSQL_INSTANCE_ID = "ems-replenishment-dev"
 DATABASE = "ems-gcp-toolkit-test"
 DISCOVERY_SERVICE = discovery.build("sqladmin", "v1beta4", cache_discovery=False)
 BUCKET_NAME = GCP_PROJECT_ID + "-gcp-toolkit-it"
@@ -25,13 +25,12 @@ class ItEmsCloudsqlUtil(TestCase):
     def setUp(self):
         self.__storage_client = EmsStorageClient(GCP_PROJECT_ID)
         temp_bucket = TempBucketDescriptor(
-            "ems-data-platform-dev",
+            GCP_PROJECT_ID,
             GCP_CLOUDSQL_INSTANCE_ID + "-temp-bucket",
             "europe-west1"
         )
-        self.__cloud_sql_client = EmsCloudsqlClient("ems-data-platform-dev",
-                                                    GCP_CLOUDSQL_INSTANCE_ID
-                                                    )
+        self.__cloud_sql_client = EmsCloudsqlClient(GCP_PROJECT_ID,
+                                                    GCP_CLOUDSQL_INSTANCE_ID)
 
         self.__util = EmsCloudsqlUtil(self.__cloud_sql_client, self.__storage_client, temp_bucket)
         self.__storage_client.create_bucket_if_not_exists(BUCKET_NAME, GCP_PROJECT_ID, "europe-west1")

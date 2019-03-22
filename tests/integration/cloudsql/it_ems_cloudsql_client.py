@@ -8,10 +8,10 @@ from tenacity import retry, stop_after_delay, retry_if_result, wait_fixed
 
 from cloudsql.ems_cloudsql_client import EmsCloudsqlClient
 from tests.integration import GCP_PROJECT_ID
+from tests.integration import GCP_CLOUDSQL_INSTANCE_ID
 
 
 class ItEmsCloudsqlClient(TestCase):
-    GCP_CLOUDSQL_INSTANCE_ID = "ems-replenishment-dev"
     DATABASE = "ems-gcp-toolkit-test"
     DISCOVERY_SERVICE = discovery.build("sqladmin", "v1beta4", cache_discovery=False)
     BUCKET_NAME = GCP_PROJECT_ID + "-gcp-toolkit-it"
@@ -20,9 +20,8 @@ class ItEmsCloudsqlClient(TestCase):
 
     def setUp(self):
         self.__storage_client = storage.Client(GCP_PROJECT_ID)
-        self.__client = EmsCloudsqlClient("ems-data-platform-dev",
-                                          self.GCP_CLOUDSQL_INSTANCE_ID
-                                          )
+        self.__client = EmsCloudsqlClient(GCP_PROJECT_ID,
+                                          GCP_CLOUDSQL_INSTANCE_ID)
 
     def test_import_csv_from_bucket_importsData(self):
         table_name = "testtable"
@@ -85,7 +84,7 @@ class ItEmsCloudsqlClient(TestCase):
             }
         }
         request = self.DISCOVERY_SERVICE.instances().import_(project=GCP_PROJECT_ID,
-                                                             instance=self.GCP_CLOUDSQL_INSTANCE_ID,
+                                                             instance=GCP_CLOUDSQL_INSTANCE_ID,
                                                              body=request_body)
         self.__wait_for_job_done(request.execute()["name"])
 
@@ -124,7 +123,7 @@ class ItEmsCloudsqlClient(TestCase):
         }
 
         request = self.DISCOVERY_SERVICE.instances().export(project=GCP_PROJECT_ID,
-                                                            instance=self.GCP_CLOUDSQL_INSTANCE_ID,
+                                                            instance=GCP_CLOUDSQL_INSTANCE_ID,
                                                             body=export_request_body)
         response = request.execute()
 
