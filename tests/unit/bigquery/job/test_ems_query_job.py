@@ -7,10 +7,11 @@ from bigquery.job.ems_query_job import EmsQueryJob
 
 class TestEmsQueryJob(TestCase):
 
+
     def setUp(self):
         self.query_config = EmsQueryJobConfig()
-        error_result = {"some": "error", "happened": "here"}
-        self.ems_query_job = EmsQueryJob("test-job-id", "query", self.query_config, EmsJobState.DONE, error_result)
+        self.expected_error_result = {"some": "error", "happened": "here"}
+        self.ems_query_job = EmsQueryJob("test-job-id", "query", self.query_config, EmsJobState.DONE,  self.expected_error_result)
 
     def test_state(self):
         self.assertEqual(self.ems_query_job.state, EmsJobState.DONE)
@@ -28,3 +29,6 @@ class TestEmsQueryJob(TestCase):
         not_failed_ems_query_job = EmsQueryJob("test-job-id", "query", self.query_config, EmsJobState.DONE, None)
 
         self.assertFalse(not_failed_ems_query_job.is_failed)
+
+    def test_error_result(self):
+        self.assertEqual(self.ems_query_job.error_result,  self.expected_error_result)

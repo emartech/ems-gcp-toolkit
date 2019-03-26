@@ -36,3 +36,8 @@ class EmsQueryJob:
     @property
     def query(self) -> str:
         return self.__query
+
+    @property
+    def error_result(self):
+        return self.__error_result
+

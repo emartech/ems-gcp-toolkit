@@ -30,3 +30,7 @@ class EmsLoadJob:
     @property
     def is_failed(self) -> bool:
         return self.__error_result is not None
+
+    @property
+    def error_result(self):
+        return self.__error_result
