@@ -11,7 +11,7 @@ class EmsStorageClient:
         bucket = self.__client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
         buffer = blob.download_as_string(start=0, end=chunk_size)
-        lines = buffer.decode("utf-8").split("\n")
+        lines = buffer.decode("utf-8", errors="ignore").split("\n")
         if len(lines) < num_lines:
             raise NotImplementedError("First chunk does not contain enough lines, increase chunk size")
         return lines[0:num_lines]
