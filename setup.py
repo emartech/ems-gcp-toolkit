@@ -10,6 +10,5 @@ setup(
     author_email="",
     description="",
     install_requires=[
-        "google-cloud-pubsub<=0.39.1"
     ]
 )
