@@ -8,6 +8,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class EmsCloudsqlClient:
+    EXECUTE_TIMEOUT = 600
     IMPORT_CSV_TIMEOUT = 600
     RELOAD_TABLE_TIMEOUT = 600
     CREATE_TMP_TABLE_TIMEOUT = 30
@@ -44,7 +45,8 @@ class EmsCloudsqlClient:
         request = self.__discovery_service.instances().import_(project=self.__project_id,
                                                                instance=self.__instance_id,
                                                                body=import_request_body)
-        self.__wait_for_job_done(request.execute()["name"], timeout_seconds)
+        ops_id = self.execute_request(request)
+        self.__wait_for_job_done(ops_id, timeout_seconds)
 
     def import_sql_from_bucket(self, database: str, source_sql_uri: str, timeout_seconds: float,
                                import_user: str) -> None:
@@ -61,9 +63,15 @@ class EmsCloudsqlClient:
         request = self.__discovery_service.instances().import_(project=self.__project_id,
                                                                instance=self.__instance_id,
                                                                body=request_body)
-        self.__wait_for_job_done(request.execute()["name"], timeout_seconds)
+        ops_id = self.execute_request(request)
+        self.__wait_for_job_done(ops_id, timeout_seconds)
 
-    # TODO should be implemented a public decorator for CloudSql discovery api calls
+    @retry(wait=wait_fixed(15),
+           stop=stop_after_delay(EXECUTE_TIMEOUT),
+           retry=retry_if_exception_type(HttpError))
+    def execute_request(self, request) -> str:
+        return request.execute()["name"]
+
     def __wait_for_job_done(self, ops_id: str, timeout_seconds: float) -> None:
         LOGGER.info("Waiting for job %s to be done", ops_id)
 
