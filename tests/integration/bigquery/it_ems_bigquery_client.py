@@ -49,7 +49,7 @@ class ItEmsBigqueryClient(TestCase):
         table_name = "test_table_" + str(int(datetime.datetime.utcnow().timestamp() * 1000))
         self.test_table  = self.__create_test_table(table_name, self.DATASET.reference)
         self.client = EmsBigqueryClient(GCP_PROJECT_ID)
-        self.storage_client = storage.Client(GCP_PROJECT_ID)
+        self.storage_client = storage.Client()
 
     def __create_test_table(self, table_name, dataset_id):
         table_schema = [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")]
