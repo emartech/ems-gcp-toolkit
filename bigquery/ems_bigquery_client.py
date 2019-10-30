@@ -62,7 +62,7 @@ class EmsBigqueryClient:
 
     def table_exists(self, table: str) -> bool:
         try:
-            self.__bigquery_client.get_table(table_ref=TableReference.from_string(table))
+            self.__bigquery_client.get_table(table=TableReference.from_string(table))
             return True
         except NotFound:
             return False
