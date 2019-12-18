@@ -11,7 +11,7 @@ setup(
     description="",
     install_requires=[
         "google-cloud-storage==1.19.0",
-        "google-cloud-pubsub==0.44.0",
+        "google-cloud-pubsub==1.0.0",
         "google-cloud-bigquery==1.19.0",
         "google-cloud-core==1.0.3",
         "google-api-core==1.14.2",
