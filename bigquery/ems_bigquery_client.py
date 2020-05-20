@@ -185,6 +185,10 @@ class EmsBigqueryClient:
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query | {} |: {}!".format(query, e.args[0]))
 
+    def wait_for_job_done(self, job_id: str, timeout_seconds: float):
+        job = self.__bigquery_client.get_job(job_id, project=self.__project_id, location=self.__location)
+        job.result(timeout=timeout_seconds)
+
     def __decorate_id_with_retry(self, job_id: str, job_prefix: str, retry_limit: int):
         retry_counter = 0
         if RETRY in job_id:

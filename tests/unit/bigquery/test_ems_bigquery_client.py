@@ -372,6 +372,18 @@ class TestEmsBigqueryClient(TestCase):
         self.assertRaises(RetryLimitExceededError,
                           ems_bigquery_client.relaunch_failed_jobs, "prefixed", MIN_CREATION_TIME)
 
+    def test_wait_for_job_done_delegatesCallToOriginalJob(self,bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        self.client_mock.get_job.return_value = self.query_job_mock
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+        timeout = 123.
+        ems_bigquery_client.wait_for_job_done("job_id", timeout)
+
+        self.query_job_mock.result.assert_called_with(timeout=timeout)
+
+
+
     def __create_query_job_mock(self, job_id: str, has_error: bool):
         error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occurred'}
         query_job_mock = Mock(QueryJob)
