@@ -5,7 +5,8 @@ from unittest.mock import patch, Mock
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField, ExtractJob
+from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField, ExtractJob, \
+    QueryJobConfig
 from google.cloud.bigquery.schema import _parse_schema_resource
 from google.cloud.bigquery.table import Row, TableReference
 
@@ -136,7 +137,6 @@ class TestEmsBigqueryClient(TestCase):
                                                                   destination_uris=destination_uris)
 
         self.assertEqual(result_job_id, expected_job_id)
-
 
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch,
@@ -372,17 +372,23 @@ class TestEmsBigqueryClient(TestCase):
         self.assertRaises(RetryLimitExceededError,
                           ems_bigquery_client.relaunch_failed_jobs, "prefixed", MIN_CREATION_TIME)
 
-    def test_wait_for_job_done_delegatesCallToOriginalJob(self,bigquery_module_patch: bigquery):
+    def test_wait_for_job_done_delegatesCallToOriginalJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.client_mock.get_job.return_value = self.query_job_mock
+        self.query_job_mock.job_id = "1234"
+        self.query_job_mock.priority = "INTERACTIVE"
+        self.query_job_mock.state = "DONE"
+        self.query_job_mock.result.return_value = self.query_job_mock
 
-        ems_bigquery_client = EmsBigqueryClient("some-project-id")
         timeout = 123.
-        ems_bigquery_client.wait_for_job_done("job_id", timeout)
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+
+        job = ems_bigquery_client.wait_for_job_done("job_id", timeout)
 
         self.query_job_mock.result.assert_called_with(timeout=timeout)
-
-
+        self.assertIsInstance(job, EmsQueryJob)
+        self.assertEqual(job.job_id, "1234")
+        self.assertEqual(job.state, EmsJobState.DONE)
 
     def __create_query_job_mock(self, job_id: str, has_error: bool):
         error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occurred'}

@@ -15,6 +15,7 @@ from bigquery.job.config.ems_job_config import EmsJobPriority
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_extract_job import EmsExtractJob
+from bigquery.job.ems_job import EmsJob
 from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
@@ -81,47 +82,56 @@ class EmsBigqueryClient:
         for job in self.__bigquery_client.list_jobs(all_users=True,
                                                     max_results=max_result,
                                                     min_creation_time=min_creation_time):
-            if isinstance(job, QueryJob):
-                destination = job.destination
-                table_id, dataset_id, project_id = \
-                    (destination.table_id, destination.dataset_id, destination.project) \
-                        if destination is not None else (None, None, None)
+            ems_job = self.__convert_to_ems_job(job)
 
-                config = EmsQueryJobConfig(priority=EmsJobPriority[job.priority],
-                                           destination_project_id=project_id,
-                                           destination_dataset=dataset_id,
-                                           destination_table=table_id,
-                                           create_disposition=job.create_disposition,
-                                           write_disposition=job.write_disposition)
-                yield EmsQueryJob(job.job_id, job.query,
+            if ems_job is not None:
+                yield ems_job
+
+    @staticmethod
+    def __convert_to_ems_job(job):
+        ems_job = None
+        if isinstance(job, QueryJob):
+            destination = job.destination
+            table_id, dataset_id, project_id = \
+                (destination.table_id, destination.dataset_id, destination.project) \
+                    if destination is not None else (None, None, None)
+
+            config = EmsQueryJobConfig(priority=EmsJobPriority[job.priority],
+                                       destination_project_id=project_id,
+                                       destination_dataset=dataset_id,
+                                       destination_table=table_id,
+                                       create_disposition=job.create_disposition,
+                                       write_disposition=job.write_disposition)
+            ems_job = EmsQueryJob(job.job_id, job.query,
                                   config,
                                   EmsJobState(job.state),
                                   job.error_result)
-            elif isinstance(job, LoadJob):
-                destination = job.destination
-                table_id, dataset_id, project_id = destination.table_id, destination.dataset_id, destination.project
-                schema = {"fields": _build_schema_resource(job.schema)}
+        elif isinstance(job, LoadJob):
+            destination = job.destination
+            table_id, dataset_id, project_id = destination.table_id, destination.dataset_id, destination.project
+            schema = {"fields": _build_schema_resource(job.schema)}
 
-                config = EmsLoadJobConfig(schema=schema,
-                                          source_uri_template=job.source_uris[0],
-                                          destination_project_id=project_id,
-                                          destination_dataset=dataset_id,
-                                          destination_table=table_id,
-                                          create_disposition=job.create_disposition,
-                                          write_disposition=job.write_disposition)
+            config = EmsLoadJobConfig(schema=schema,
+                                      source_uri_template=job.source_uris[0],
+                                      destination_project_id=project_id,
+                                      destination_dataset=dataset_id,
+                                      destination_table=table_id,
+                                      create_disposition=job.create_disposition,
+                                      write_disposition=job.write_disposition)
 
-                yield EmsLoadJob(job_id=job.job_id,
+            ems_job = EmsLoadJob(job_id=job.job_id,
                                  load_config=config,
                                  state=EmsJobState(job.state),
                                  error_result=None)
-            elif isinstance(job, ExtractJob):
-                table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
-                destination_uris = job.destination_uris
-                yield EmsExtractJob(job_id=job.job_id,
+        elif isinstance(job, ExtractJob):
+            table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
+            destination_uris = job.destination_uris
+            ems_job = EmsExtractJob(job_id=job.job_id,
                                     table=table,
                                     destination_uris=destination_uris,
                                     state=EmsJobState(job.state),
                                     error_result=job.error_result)
+        return ems_job
 
     def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:
         jobs = self.get_job_list(min_creation_time, max_result)
@@ -185,9 +195,9 @@ class EmsBigqueryClient:
         except GoogleAPIError as e:
             raise EmsApiError("Error caused while running query | {} |: {}!".format(query, e.args[0]))
 
-    def wait_for_job_done(self, job_id: str, timeout_seconds: float):
+    def wait_for_job_done(self, job_id: str, timeout_seconds: float) -> EmsJob:
         job = self.__bigquery_client.get_job(job_id, project=self.__project_id, location=self.__location)
-        job.result(timeout=timeout_seconds)
+        return self.__convert_to_ems_job(job.result(timeout=timeout_seconds))
 
     def __decorate_id_with_retry(self, job_id: str, job_prefix: str, retry_limit: int):
         retry_counter = 0
