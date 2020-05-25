@@ -399,7 +399,7 @@ class TestEmsBigqueryClient(TestCase):
         self.query_job_mock.job_id = "1234"
         self.query_job_mock.priority = "INTERACTIVE"
         self.query_job_mock.state = "DONE"
-        self.query_job_mock.result.return_value = self.query_job_mock
+        self.query_job_mock.result.return_value = []  # we dont care
 
         timeout = 123.
         ems_bigquery_client = EmsBigqueryClient("some-project-id")

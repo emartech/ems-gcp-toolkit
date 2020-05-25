@@ -213,7 +213,8 @@ class EmsBigqueryClient:
 
     def wait_for_job_done(self, job_id: str, timeout_seconds: float) -> EmsJob:
         job = self.__bigquery_client.get_job(job_id, project=self.__project_id, location=self.__location)
-        return self.__convert_to_ems_job(job.result(timeout=timeout_seconds))
+        job.result(timeout=timeout_seconds)
+        return self.__convert_to_ems_job(job)
 
     def __decorate_id_with_retry(self, job_id: str, job_prefix: str, retry_limit: int):
         retry_counter = 0
