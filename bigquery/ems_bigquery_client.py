@@ -89,7 +89,6 @@ class EmsBigqueryClient:
 
     @staticmethod
     def __convert_to_ems_job(job):
-        ems_job = None
         if isinstance(job, QueryJob):
             destination = job.destination
             table_id, dataset_id, project_id = \
@@ -102,7 +101,7 @@ class EmsBigqueryClient:
                                        destination_table=table_id,
                                        create_disposition=EmsBigqueryClient.__convert_to_ems_create_disposition(job.create_disposition),
                                        write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(job.write_disposition))
-            ems_job = EmsQueryJob(job.job_id, job.query,
+            return EmsQueryJob(job.job_id, job.query,
                                   config,
                                   EmsJobState(job.state),
                                   job.error_result)
@@ -121,19 +120,22 @@ class EmsBigqueryClient:
                                       write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(
                                           job.write_disposition))
 
-            ems_job = EmsLoadJob(job_id=job.job_id,
+            return EmsLoadJob(job_id=job.job_id,
                                  load_config=config,
                                  state=EmsJobState(job.state),
                                  error_result=None)
         elif isinstance(job, ExtractJob):
             table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
             destination_uris = job.destination_uris
-            ems_job = EmsExtractJob(job_id=job.job_id,
+            return EmsExtractJob(job_id=job.job_id,
                                     table=table,
                                     destination_uris=destination_uris,
                                     state=EmsJobState(job.state),
                                     error_result=job.error_result)
-        return ems_job
+        else:
+            LOGGER.error(f"Unexpected job type for :{job}")
+            LOGGER.error(f"Job type class: {job.__class__}")
+            return None
 
     @staticmethod
     def __convert_to_ems_create_disposition(disposition):
