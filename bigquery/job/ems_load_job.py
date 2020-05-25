@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Union
 
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
@@ -10,8 +11,9 @@ class EmsLoadJob(EmsJob):
                  job_id: str,
                  load_config: EmsLoadJobConfig,
                  state: EmsJobState,
-                 error_result: Union[dict, None]):
-        super(EmsLoadJob, self).__init__(job_id, state, error_result)
+                 error_result: Union[dict, None],
+                 created: datetime = None):
+        super(EmsLoadJob, self).__init__(job_id, state, error_result, created)
 
         self.__load_config = load_config
 

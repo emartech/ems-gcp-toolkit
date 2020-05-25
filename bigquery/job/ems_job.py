@@ -1,3 +1,4 @@
+from datetime import datetime
 from abc import ABC
 from typing import Union
 
@@ -9,14 +10,20 @@ class EmsJob(ABC):
     def __init__(self,
                  job_id: str,
                  state: EmsJobState,
-                 error_result: Union[dict, None]):
+                 error_result: Union[dict, None],
+                 created: datetime = None):
         self.__job_id = job_id
         self.__state = state
         self.__error_result = error_result
+        self.__created = created
 
     @property
     def state(self) -> EmsJobState:
         return self.__state
+
+    @property
+    def created(self) -> datetime:
+        return self.__created
 
     @property
     def job_id(self) -> str:

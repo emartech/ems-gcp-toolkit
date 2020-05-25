@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Union
 
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
@@ -11,8 +12,9 @@ class EmsQueryJob(EmsJob):
                  query: str,
                  query_config: EmsQueryJobConfig,
                  state: EmsJobState,
-                 error_result: Union[dict, None]):
-        super(EmsQueryJob, self).__init__(job_id, state, error_result)
+                 error_result: Union[dict, None],
+                 created: datetime = None):
+        super(EmsQueryJob, self).__init__(job_id, state, error_result, created)
 
         self.__query = query
         self.__query_config = query_config
