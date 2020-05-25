@@ -11,7 +11,7 @@ from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, Data
 from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
 
 from bigquery.ems_api_error import EmsApiError
-from bigquery.job.config.ems_job_config import EmsJobPriority
+from bigquery.job.config.ems_job_config import EmsJobPriority, EmsCreateDisposition, EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
 from bigquery.job.ems_extract_job import EmsExtractJob
@@ -100,8 +100,8 @@ class EmsBigqueryClient:
                                        destination_project_id=project_id,
                                        destination_dataset=dataset_id,
                                        destination_table=table_id,
-                                       create_disposition=job.create_disposition,
-                                       write_disposition=job.write_disposition)
+                                       create_disposition=EmsBigqueryClient.__convert_to_ems_create_disposition(job.create_disposition),
+                                       write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(job.write_disposition))
             ems_job = EmsQueryJob(job.job_id, job.query,
                                   config,
                                   EmsJobState(job.state),
@@ -116,8 +116,10 @@ class EmsBigqueryClient:
                                       destination_project_id=project_id,
                                       destination_dataset=dataset_id,
                                       destination_table=table_id,
-                                      create_disposition=job.create_disposition,
-                                      write_disposition=job.write_disposition)
+                                      create_disposition=EmsBigqueryClient.__convert_to_ems_create_disposition(
+                                          job.create_disposition),
+                                      write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(
+                                          job.write_disposition))
 
             ems_job = EmsLoadJob(job_id=job.job_id,
                                  load_config=config,
@@ -132,6 +134,18 @@ class EmsBigqueryClient:
                                     state=EmsJobState(job.state),
                                     error_result=job.error_result)
         return ems_job
+
+    @staticmethod
+    def __convert_to_ems_create_disposition(disposition):
+        if disposition is None:
+            return None
+        return EmsCreateDisposition(disposition)
+
+    @staticmethod
+    def __convert_to_ems_write_disposition(disposition):
+        if disposition is None:
+            return None
+        return EmsWriteDisposition(disposition)
 
     def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:
         jobs = self.get_job_list(min_creation_time, max_result)
