@@ -111,7 +111,7 @@ class EmsBigqueryClient:
             schema = {"fields": _build_schema_resource(job.schema)}
 
             config = EmsLoadJobConfig(schema=schema,
-                                      source_uri_template=job.source_uris[0],
+                                      source_uri_template=job.source_uris[0] if job.source_uris else None,
                                       destination_project_id=project_id,
                                       destination_dataset=dataset_id,
                                       destination_table=table_id,
