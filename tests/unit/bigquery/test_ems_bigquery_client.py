@@ -311,7 +311,8 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(query_jobs, [])
         self.client_mock.list_jobs.assert_called_with(all_users=True,
                                                       max_results=20,
-                                                      min_creation_time=min_creation_time)
+                                                      min_creation_time=min_creation_time,
+                                                      max_creation_time=None)
 
     def test_get_jobs_for_prefix_returnsFilteredJobs_ifJobFoundWithSpecificJobIdPrefix(
             self,

@@ -153,12 +153,12 @@ class EmsBigqueryClient:
             return None
         return EmsWriteDisposition(disposition)
 
-    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime, max_result: int = 20) -> list:
+    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_result: int = 20) -> list:
         jobs = self.get_job_list(min_creation_time, max_creation_time, max_result)
         matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
-    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime, max_attempts: int = 3,  max_result: int = None) -> list:
+    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_attempts: int = 3,  max_result: int = None) -> list:
         def launch(job: EmsQueryJob) -> str:
             prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, max_attempts)
             return self.run_async_query(job.query, prefix_with_retry, job.query_config)
