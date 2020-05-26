@@ -68,11 +68,14 @@ class EmsBigqueryClient:
         except NotFound:
             return False
 
-    def get_job_list(self, min_creation_time: datetime = None, max_result: int = 20) -> Iterable:
+    def get_job_list(self, min_creation_time: datetime = None, max_creation_time: datetime = None, max_result: int = 20) -> Iterable:
         """
         Args:
             min_creation_time (datetime.datetime, optional):
                 If set, only jobs created after or at this timestamp are returned.
+                If the datetime has no time zone assumes UTC time.
+            max_creation_time (datetime.datetime, optional):
+                If set, only jobs created before or at this timestamp are returned.
                 If the datetime has no time zone assumes UTC time.
             max_result (int, optional):
                 Maximum number of jobs to return.
@@ -81,7 +84,8 @@ class EmsBigqueryClient:
         """
         for job in self.__bigquery_client.list_jobs(all_users=True,
                                                     max_results=max_result,
-                                                    min_creation_time=min_creation_time):
+                                                    min_creation_time=min_creation_time,
+                                                    max_creation_time=max_creation_time):
             ems_job = self.__convert_to_ems_job(job)
 
             if ems_job is not None:
@@ -149,17 +153,17 @@ class EmsBigqueryClient:
             return None
         return EmsWriteDisposition(disposition)
 
-    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_result: int = 20) -> list:
-        jobs = self.get_job_list(min_creation_time, max_result)
+    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime, max_result: int = 20) -> list:
+        jobs = self.get_job_list(min_creation_time, max_creation_time, max_result)
         matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
-    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_attempts: int = 3,  max_result: int = 20) -> list:
+    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime, max_attempts: int = 3,  max_result: int = None) -> list:
         def launch(job: EmsQueryJob) -> str:
             prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, max_attempts)
             return self.run_async_query(job.query, prefix_with_retry, job.query_config)
 
-        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_result)
+        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_creation_time, max_result)
         failed_jobs = [x for x in jobs if x.is_failed]
         return [launch(job) for job in failed_jobs]
 
