@@ -112,7 +112,7 @@ class EmsBigqueryClient:
         elif isinstance(job, LoadJob):
             destination = job.destination
             table_id, dataset_id, project_id = destination.table_id, destination.dataset_id, destination.project
-            schema = {"fields": _build_schema_resource(job.schema)}
+            schema = {"fields": _build_schema_resource(job.schema)} if job.schema else []
 
             config = EmsLoadJobConfig(schema=schema,
                                       source_uri_template=job.source_uris[0] if job.source_uris else None,
