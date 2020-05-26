@@ -154,12 +154,12 @@ class EmsBigqueryClient:
         matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
-    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_attempts: int = 3) -> list:
+    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_attempts: int = 3,  max_result: int = 20) -> list:
         def launch(job: EmsQueryJob) -> str:
             prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, max_attempts)
             return self.run_async_query(job.query, prefix_with_retry, job.query_config)
 
-        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time)
+        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_result)
         failed_jobs = [x for x in jobs if x.is_failed]
         return [launch(job) for job in failed_jobs]
 
