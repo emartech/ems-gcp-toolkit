@@ -1,7 +1,10 @@
 from unittest import TestCase
 
+from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig
 from bigquery.job.ems_extract_job import EmsExtractJob
 from bigquery.job.ems_job_state import EmsJobState
+
+EXTRACT_JOB_CONFIG = EmsExtractJobConfig("comp", "format c:", "delimiter", False)
 
 
 class TestEmsExtractJob(TestCase):
@@ -9,7 +12,9 @@ class TestEmsExtractJob(TestCase):
     def setUp(self):
         self.expected_error_result = {"some": "error", "happened": "here"}
         self.ems_extract_job = EmsExtractJob("test-job-id", "dummy-project-id.dummy-dataset.dummy-table",
-                                             ["gs://some-non-existing-bucket-id/destination1"], EmsJobState.DONE,
+                                             ["gs://some-non-existing-bucket-id/destination1"],
+                                             EXTRACT_JOB_CONFIG,
+                                             EmsJobState.DONE,
                                              self.expected_error_result)
 
     def test_state(self):
@@ -23,7 +28,8 @@ class TestEmsExtractJob(TestCase):
 
     def test_is_not_failed(self):
         not_failed_ems_load_job = EmsExtractJob("test-job-id", "dummy-project-id.dummy-dataset.dummy-table",
-                                             ["gs://some-non-existing-bucket-id/destination1"], EmsJobState.DONE, None)
+                                                ["gs://some-non-existing-bucket-id/destination1"], EXTRACT_JOB_CONFIG,
+                                                EmsJobState.DONE, None)
 
         self.assertFalse(not_failed_ems_load_job.is_failed)
 

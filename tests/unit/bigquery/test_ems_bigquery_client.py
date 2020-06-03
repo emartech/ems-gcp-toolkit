@@ -19,6 +19,8 @@ from bigquery.job.ems_job_state import EmsJobState
 from bigquery.job.ems_load_job import EmsLoadJob
 from bigquery.job.ems_query_job import EmsQueryJob
 
+DUMMY_TABLE_NAME = "my-project.mydataset.mytable"
+
 MIN_CREATION_TIME = datetime(1970, 4, 4)
 
 
@@ -132,9 +134,9 @@ class TestEmsBigqueryClient(TestCase):
         self.extract_job_mock = Mock(ExtractJob)
         self.extract_job_mock.job_id = expected_job_id
         self.client_mock.extract_table.return_value = self.extract_job_mock
-        ems_job_config = EmsExtractJobConfig(compression="insane", destination_format="c:\\", field_delimiter="Deli mit R",
-                                         print_header=True)
-
+        ems_job_config = EmsExtractJobConfig(compression="insane", destination_format="c:\\",
+                                             field_delimiter="Deli mit R",
+                                             print_header=True)
 
         ems_bigquery_client = EmsBigqueryClient(project_id, "Emelet")
         result_job_id = ems_bigquery_client.run_async_extract_job(job_id_prefix=job_prefix,
@@ -358,29 +360,53 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual("prefixed-retry-1-", arguments["job_id_prefix"])
         self.assertEqual(arguments["query"], "SIMPLE QUERY")
 
-    def test_relaunch_failed_jobs_startsQueryJobForAllTheJobs(self, bigquery_module_patch: bigquery):
+    def test_relaunch_failed_jobs_startsExtractJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        first_job = self.__create_query_job_mock("prefixed-some-job-id", True)
-        second_job = self.__create_query_job_mock("prefixed-some-job-id", False)
-        self.client_mock.list_jobs.return_value = [first_job, second_job]
+        table = DUMMY_TABLE_NAME
+        job = self.__create_extract_job_mock("prefixed-some-job-id", table, True)
+        self.client_mock.list_jobs.return_value = [job]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id", "valhalla")
+        ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
+
+        arguments = self.client_mock.extract_table.call_args_list[0][1]
+        self.assertEqual("prefixed-retry-1-", arguments["job_id_prefix"])
+        self.assertEqual(arguments["destination_uris"], job.destination_uris)
+        self.assertEqual(arguments["job_id_prefix"], "prefixed-retry-1-")
+        self.assertEqual(arguments["location"], "valhalla")
+        self.assertEqual(arguments["source"], TableReference.from_string(table))
+
+        self.assertEqual(arguments["job_config"].compression, job.compression)
+        self.assertEqual(arguments["job_config"].destination_format, job.destination_format)
+        self.assertEqual(arguments["job_config"].field_delimiter, job.field_delimiter)
+        self.assertEqual(arguments["job_config"].print_header, job.print_header)
+
+    def test_relaunch_failed_jobs_startsNewJobForAllFailedJobs(self, bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+        first_job = self.__create_query_job_mock("prefixed-query", True)
+        second_job = self.__create_query_job_mock("prefixed-done", False)
+        third_job = self.__create_extract_job_mock("prefixed-extract", DUMMY_TABLE_NAME, True)
+        self.client_mock.list_jobs.return_value = [first_job, second_job, third_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
         ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
         self.client_mock.query.assert_called_once()
-        first_call_args = self.client_mock.query.call_args_list[0][1]
-        self.assertEqual("prefixed-retry-1-", first_call_args["job_id_prefix"])
+        self.client_mock.extract_table.assert_called_once()
+        self.assertEqual("prefixed-retry-1-", self.client_mock.query.call_args_list[0][1]["job_id_prefix"])
+        self.assertEqual("prefixed-retry-1-", self.client_mock.extract_table.call_args_list[0][1]["job_id_prefix"])
 
-    def test_relaunch_failed_jobs_startsQueryJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
+    def test_relaunch_failed_jobs_startsNewJobWithIncreasedRetryIndex(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
-        first_job = self.__create_query_job_mock("prefixed-retry-1-some-job-id", True)
-        self.client_mock.list_jobs.return_value = [first_job]
+        query_job = self.__create_query_job_mock("prefixed-retry-1-some-random1", True)
+        extract_job = self.__create_extract_job_mock("prefixed-retry-1-some-random2", DUMMY_TABLE_NAME, True)
+        self.client_mock.list_jobs.return_value = [query_job, extract_job]
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
         ems_bigquery_client.relaunch_failed_jobs("prefixed", MIN_CREATION_TIME)
 
-        arguments = self.client_mock.query.call_args_list[0][1]
-        self.assertEqual("prefixed-retry-2-", arguments["job_id_prefix"])
+        self.assertEqual("prefixed-retry-2-", self.client_mock.query.call_args_list[0][1]["job_id_prefix"])
+        self.assertEqual("prefixed-retry-2-", self.client_mock.extract_table.call_args_list[0][1]["job_id_prefix"])
 
     def test_relaunch_failed_jobs_canRetryMoreThanNineTimes(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
@@ -436,6 +462,20 @@ class TestEmsBigqueryClient(TestCase):
         query_job_mock.state = "DONE"
         query_job_mock.create_disposition = None
         query_job_mock.write_disposition = None
+        query_job_mock.error_result = error_result if has_error else None
+        return query_job_mock
+
+    def __create_extract_job_mock(self, job_id: str, table: str, has_error: bool):
+        error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occurred'}
+        query_job_mock = Mock(ExtractJob)
+        query_job_mock.job_id = job_id
+        query_job_mock.destination_uris = ["uri1"]
+        query_job_mock.source = TableReference.from_string(table)
+        query_job_mock.compression = "zip"
+        query_job_mock.field_delimiter = ","
+        query_job_mock.print_header = True
+        query_job_mock.destination_format = "format"
+        query_job_mock.state = "DONE"
         query_job_mock.error_result = error_result if has_error else None
         return query_job_mock
 

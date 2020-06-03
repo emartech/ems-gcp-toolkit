@@ -4,10 +4,10 @@ from bigquery.job.config.ems_job_config import EmsJobConfig
 class EmsExtractJobConfig(EmsJobConfig):
 
     def __init__(self,
-                 compression,
-                 destination_format,
-                 field_delimiter,
-                 print_header,
+                 compression=None,
+                 destination_format=None,
+                 field_delimiter=None,
+                 print_header=False,
                  *args, **kwargs):
         super(EmsExtractJobConfig, self).__init__(*args, **kwargs)
         self.__print_header = print_header

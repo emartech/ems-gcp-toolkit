@@ -2,7 +2,7 @@ import logging
 import re
 from collections import Iterable
 from datetime import datetime
-from typing import List
+from typing import List, Union
 
 from google.api_core.exceptions import GoogleAPIError, NotFound, Conflict
 from google.cloud import bigquery
@@ -132,11 +132,16 @@ class EmsBigqueryClient:
         elif isinstance(job, ExtractJob):
             table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
             destination_uris = job.destination_uris
+            job_config = EmsExtractJobConfig(compression=job.compression,
+                                             destination_format=job.destination_format,
+                                             field_delimiter=job.field_delimiter,
+                                             print_header=job.print_header)
             return EmsExtractJob(job_id=job.job_id,
-                                    table=table,
-                                    destination_uris=destination_uris,
-                                    state=EmsJobState(job.state),
-                                    error_result=job.error_result)
+                                 table=table,
+                                 destination_uris=destination_uris,
+                                 job_config=job_config,
+                                 state=EmsJobState(job.state),
+                                 error_result=job.error_result)
         else:
             LOGGER.error(f"Unexpected job type for :{job}")
             LOGGER.error(f"Job type class: {job.__class__}")
@@ -160,9 +165,15 @@ class EmsBigqueryClient:
         return list(matched_jobs)
 
     def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_attempts: int = 3,  max_result: int = None) -> list:
-        def launch(job: EmsQueryJob) -> str:
+        def launch(job: Union[EmsQueryJob, EmsExtractJob]) -> str:
             prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, max_attempts)
-            return self.run_async_query(job.query, prefix_with_retry, job.query_config)
+
+            if isinstance(job, EmsQueryJob):
+                return self.run_async_query(job.query, prefix_with_retry, job.query_config)
+            elif isinstance(job, EmsExtractJob):
+                return self.run_async_extract_job(prefix_with_retry, job.table, job.destination_uris, job.job_config)
+            else:
+                LOGGER.error(f"Unsupported job: {job}")
 
         jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_creation_time, max_result)
         failed_jobs = [x for x in jobs if x.is_failed]

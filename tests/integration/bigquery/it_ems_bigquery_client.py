@@ -32,6 +32,7 @@ class ItEmsBigqueryClient(TestCase):
     INSERT_TEMPLATE = "INSERT INTO `{}` (int_data, str_data) VALUES (1, 'hello')"
     SELECT_TEMPLATE = "SELECT * FROM `{}`"
     DUMMY_SELECT_TO_TABLE = "SELECT 1 AS int_data, 'hello' AS str_data"
+    TEST_BUCKET_NAME = GCP_PROJECT_ID + "-gcp-toolkit-it"
 
     @classmethod
     def setUpClass(cls):
@@ -51,6 +52,11 @@ class ItEmsBigqueryClient(TestCase):
         self.test_table = self.__create_test_table(table_name, self.DATASET.reference)
         self.client = EmsBigqueryClient(GCP_PROJECT_ID)
         self.storage_client = storage.Client()
+
+    def tearDown(self):
+        bucket = self.__get_test_bucket(self.TEST_BUCKET_NAME)
+        bucket.delete(True)
+
 
     def __create_test_table(self, table_name, dataset_id):
         table_schema = [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")]
@@ -150,7 +156,7 @@ class ItEmsBigqueryClient(TestCase):
         expected_ids = [id1, id2]
         self.assertSetEqual(set(expected_ids), set(job_ids))
 
-    def test_relaunch_failed_jobs(self):
+    def test_relaunch_failed_query_jobs(self):
         job_prefix = "testprefix" + uuid.uuid4().hex
         id1 = self.client.run_async_query(self.DUMMY_QUERY, job_id_prefix=job_prefix)
         id2 = self.client.run_async_query(self.BAD_QUERY, job_id_prefix=job_prefix)
@@ -163,6 +169,28 @@ class ItEmsBigqueryClient(TestCase):
         min_creation_time = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
         job_ids = self.client.relaunch_failed_jobs(job_prefix, min_creation_time)
 
+        self.assertEqual(len(job_ids), 1)
+        self.assertRegex(job_ids[0], job_prefix + "-retry-1-.*")
+
+    def test_relaunch_failed_extract_jobs(self):
+        min_creation_time = datetime.datetime.utcnow()
+        job_prefix = "testprefix" + uuid.uuid4().hex
+        bucket = self.__get_test_bucket(self.TEST_BUCKET_NAME)
+        blob_name = f'exported_{int(min_creation_time.timestamp())}.csv'
+        good_bucket = f"gs://{self.TEST_BUCKET_NAME}/{blob_name}"
+        wrong_bucket = f"gs://ems_not_a_god_bucket_it_test/wrong_blob.vsct"
+        id1 = self.client.run_async_extract_job(job_prefix, self.__get_table_path(), [wrong_bucket], EmsExtractJobConfig())
+        id2 = self.client.run_async_extract_job(job_prefix, self.__get_table_path(), [good_bucket], EmsExtractJobConfig())
+        id3 = self.client.run_async_extract_job("unique_prefix", self.__get_table_path(), [wrong_bucket], EmsExtractJobConfig())
+
+        self.__wait_for_job_submitted(id1)
+        self.__wait_for_job_submitted(id2)
+        self.__wait_for_job_submitted(id3)
+
+        job_ids = self.client.relaunch_failed_jobs(job_prefix, min_creation_time)
+
+        bucket.delete_blob(blob_name)
+        self.assertEqual(len(job_ids), 1)
         self.assertRegex(job_ids[0], job_prefix + "-retry-1-.*")
 
     def test_get_job_list_returnsLoadJob(self):
@@ -203,7 +231,7 @@ class ItEmsBigqueryClient(TestCase):
         self.client.run_sync_query(query)
         min_creation_time = datetime.datetime.utcnow()
 
-        bucket_name = GCP_PROJECT_ID + "-gcp-toolkit-it"
+        bucket_name = self.TEST_BUCKET_NAME
         bucket = self.__get_test_bucket(bucket_name)
         blob_name = f'exported_{int(min_creation_time.timestamp())}.csv'
 
@@ -221,7 +249,7 @@ class ItEmsBigqueryClient(TestCase):
         self.client.run_sync_query(query)
         min_creation_time = datetime.datetime.utcnow()
 
-        bucket_name = GCP_PROJECT_ID + "-gcp-toolkit-it"
+        bucket_name = self.TEST_BUCKET_NAME
         bucket = self.__get_test_bucket(bucket_name)
         blob_name = f'exported_{int(min_creation_time.timestamp())}.csv'
 
