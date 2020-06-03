@@ -5,13 +5,13 @@ from unittest.mock import patch, Mock
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField, ExtractJob, \
-    QueryJobConfig
+from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField, ExtractJob
 from google.cloud.bigquery.schema import _parse_schema_resource
 from google.cloud.bigquery.table import Row, TableReference
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
+from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig
 from bigquery.job.config.ems_job_config import EmsCreateDisposition, EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
@@ -132,13 +132,27 @@ class TestEmsBigqueryClient(TestCase):
         self.extract_job_mock = Mock(ExtractJob)
         self.extract_job_mock.job_id = expected_job_id
         self.client_mock.extract_table.return_value = self.extract_job_mock
+        ems_job_config = EmsExtractJobConfig(compression="insane", destination_format="c:\\", field_delimiter="Deli mit R",
+                                         print_header=True)
 
-        ems_bigquery_client = EmsBigqueryClient(project_id)
+
+        ems_bigquery_client = EmsBigqueryClient(project_id, "Emelet")
         result_job_id = ems_bigquery_client.run_async_extract_job(job_id_prefix=job_prefix,
                                                                   table=table,
-                                                                  destination_uris=destination_uris)
+                                                                  destination_uris=destination_uris,
+                                                                  job_config=ems_job_config)
+        call_args_list = self.client_mock.extract_table.call_args_list
+        args = call_args_list[0][1]
 
-        self.assertEqual(result_job_id, expected_job_id)
+        assert args["location"] == "Emelet"
+        assert args["source"] == TableReference.from_string(table_id=table)
+        assert args["job_id_prefix"] == job_prefix
+        assert args["destination_uris"] == destination_uris
+        assert args["job_config"].compression == "insane"
+        assert args["job_config"].destination_format == "c:\\"
+        assert args["job_config"].field_delimiter == "Deli mit R"
+        assert args["job_config"].print_header == True
+        assert result_job_id == expected_job_id
 
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch,
@@ -263,7 +277,8 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(result[0].query_config.destination_dataset, None)
         self.assertEqual(result[0].query_config.destination_table, None)
 
-    def test_get_job_list_returnsJobWithEmsQueryJobConfigWithDispositionsConvertedCorrectly(self, bigquery_module_patch: bigquery):
+    def test_get_job_list_returnsJobWithEmsQueryJobConfigWithDispositionsConvertedCorrectly(self,
+                                                                                            bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
         self.query_job_mock.job_id = "123"
         self.query_job_mock.query = "SELECT 1"
@@ -278,7 +293,6 @@ class TestEmsBigqueryClient(TestCase):
         result = list(job_list_iterable)
         self.assertEqual(result[0].query_config.write_disposition, EmsWriteDisposition.WRITE_APPEND)
         self.assertEqual(result[0].query_config.create_disposition, EmsCreateDisposition.CREATE_IF_NEEDED)
-
 
     def test_get_job_list_returnsJobWithEmsQueryJobConfigWithSetDestination(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock

@@ -12,6 +12,7 @@ from tenacity import retry, stop_after_delay, retry_if_result
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient
+from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig
 from bigquery.job.config.ems_job_config import EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
@@ -47,7 +48,7 @@ class ItEmsBigqueryClient(TestCase):
 
     def setUp(self):
         table_name = "test_table_" + str(int(datetime.datetime.utcnow().timestamp() * 1000))
-        self.test_table  = self.__create_test_table(table_name, self.DATASET.reference)
+        self.test_table = self.__create_test_table(table_name, self.DATASET.reference)
         self.client = EmsBigqueryClient(GCP_PROJECT_ID)
         self.storage_client = storage.Client()
 
@@ -182,7 +183,10 @@ class ItEmsBigqueryClient(TestCase):
         min_creation_time = datetime.datetime.utcnow()
         destination_uris = ["gs://some-non-existing-bucket-id/destination1"]
         table_path = self.__get_table_path()
-        unique_id = self.client.run_async_extract_job("extract_job_test", table_path, destination_uris)
+        unique_id = self.client.run_async_extract_job("extract_job_test", table_path, destination_uris,
+                                                      job_config=EmsExtractJobConfig(compression=None, destination_format=None,
+                                                                          field_delimiter=None,
+                                                                          print_header=None))
         self.__wait_for_job_done(unique_id)
         jobs_iterator = self.client.get_jobs_with_prefix("extract_job_test", min_creation_time)
 
@@ -234,7 +238,9 @@ class ItEmsBigqueryClient(TestCase):
         table_path = self.__get_table_path()
         job_id_prefix = "extract_job_test"
         unique_id = self.client.run_async_extract_job(job_id_prefix, table_path, [f'gs://{bucket_name}/{blob_name}'],
-                                                      print_header)
+                                                      EmsExtractJobConfig(compression=None, destination_format=None,
+                                                                          field_delimiter=None,
+                                                                          print_header=print_header))
         self.__wait_for_job_done(unique_id)
         jobs_iterator = self.client.get_jobs_with_prefix(job_id_prefix, min_creation_time)
         job: EmsExtractJob = next(j for j in jobs_iterator if j.job_id == unique_id)
@@ -252,7 +258,10 @@ class ItEmsBigqueryClient(TestCase):
         id_for_query_job = self.client.run_async_query(self.DUMMY_QUERY, job_id_prefix="it_job")
         id_for_load_job = self.client.run_async_load_job(job_id_prefix="it_job", config=load_config)
         id_for_extract_job = self.client.run_async_extract_job(job_id_prefix="it_job", table=self.__get_table_path(),
-                                                               destination_uris=destination_uris)
+                                                               destination_uris=destination_uris,
+                                                               job_config=EmsExtractJobConfig(compression=None, destination_format=None,
+                                                                          field_delimiter=None,
+                                                                          print_header=None))
 
         self.__wait_for_job_done(id_for_query_job)
         self.__wait_for_job_done(id_for_load_job)
