@@ -11,7 +11,7 @@ from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, Data
 from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
 
 from bigquery.ems_api_error import EmsApiError
-from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig
+from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig, Compression, DestinationFormat
 from bigquery.job.config.ems_job_config import EmsJobPriority, EmsCreateDisposition, EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
@@ -132,8 +132,8 @@ class EmsBigqueryClient:
         elif isinstance(job, ExtractJob):
             table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
             destination_uris = job.destination_uris
-            job_config = EmsExtractJobConfig(compression=job.compression,
-                                             destination_format=job.destination_format,
+            job_config = EmsExtractJobConfig(compression=Compression(job.compression),
+                                             destination_format=DestinationFormat(job.destination_format),
                                              field_delimiter=job.field_delimiter,
                                              print_header=job.print_header)
             return EmsExtractJob(job_id=job.job_id,
@@ -262,11 +262,10 @@ class EmsBigqueryClient:
     def __create_extract_job_config(self, ems_job_config: EmsExtractJobConfig) -> ExtractJobConfig:
         config = ExtractJobConfig()
 
-        config.compression = ems_job_config.compression
-        config.destination_format = ems_job_config.destination_format
+        config.compression = ems_job_config.compression.value
+        config.destination_format = ems_job_config.destination_format.value
         config.field_delimiter = ems_job_config.field_delimiter
         config.print_header = ems_job_config.print_header
-        config.compression = ems_job_config.compression
         return config
 
     def __create_job_config(self, ems_query_job_config: EmsQueryJobConfig) -> QueryJobConfig:

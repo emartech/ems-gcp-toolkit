@@ -11,7 +11,7 @@ from google.cloud.bigquery.table import Row, TableReference
 
 from bigquery.ems_api_error import EmsApiError
 from bigquery.ems_bigquery_client import EmsBigqueryClient, RetryLimitExceededError
-from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig
+from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig, Compression, DestinationFormat
 from bigquery.job.config.ems_job_config import EmsCreateDisposition, EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
 from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
@@ -134,7 +134,8 @@ class TestEmsBigqueryClient(TestCase):
         self.extract_job_mock = Mock(ExtractJob)
         self.extract_job_mock.job_id = expected_job_id
         self.client_mock.extract_table.return_value = self.extract_job_mock
-        ems_job_config = EmsExtractJobConfig(compression="insane", destination_format="c:\\",
+        ems_job_config = EmsExtractJobConfig(compression=Compression.GZIP,
+                                             destination_format=DestinationFormat.CSV,
                                              field_delimiter="Deli mit R",
                                              print_header=True)
 
@@ -150,8 +151,8 @@ class TestEmsBigqueryClient(TestCase):
         assert args["source"] == TableReference.from_string(table_id=table)
         assert args["job_id_prefix"] == job_prefix
         assert args["destination_uris"] == destination_uris
-        assert args["job_config"].compression == "insane"
-        assert args["job_config"].destination_format == "c:\\"
+        assert args["job_config"].compression == "GZIP"
+        assert args["job_config"].destination_format == "CSV"
         assert args["job_config"].field_delimiter == "Deli mit R"
         assert args["job_config"].print_header == True
         assert result_job_id == expected_job_id
@@ -471,10 +472,10 @@ class TestEmsBigqueryClient(TestCase):
         query_job_mock.job_id = job_id
         query_job_mock.destination_uris = ["uri1"]
         query_job_mock.source = TableReference.from_string(table)
-        query_job_mock.compression = "zip"
+        query_job_mock.compression = "GZIP"
         query_job_mock.field_delimiter = ","
         query_job_mock.print_header = True
-        query_job_mock.destination_format = "format"
+        query_job_mock.destination_format = "CSV"
         query_job_mock.state = "DONE"
         query_job_mock.error_result = error_result if has_error else None
         return query_job_mock
