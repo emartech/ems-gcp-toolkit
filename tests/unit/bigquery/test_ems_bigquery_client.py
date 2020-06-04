@@ -323,10 +323,10 @@ class TestEmsBigqueryClient(TestCase):
 
         ems_bigquery_client = EmsBigqueryClient("some-project-id")
         min_creation_time = datetime.now()
-        query_jobs = ems_bigquery_client.get_jobs_with_prefix("prefixed", min_creation_time)
+        query_jobs = ems_bigquery_client.get_jobs_with_prefix("prefixed", min_creation_time, all_users=False)
 
         self.assertEqual(query_jobs, [])
-        self.client_mock.list_jobs.assert_called_with(all_users=True,
+        self.client_mock.list_jobs.assert_called_with(all_users=False,
                                                       max_results=20,
                                                       min_creation_time=min_creation_time,
                                                       max_creation_time=None)

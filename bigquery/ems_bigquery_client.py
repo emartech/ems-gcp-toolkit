@@ -69,7 +69,7 @@ class EmsBigqueryClient:
         except NotFound:
             return False
 
-    def get_job_list(self, min_creation_time: datetime = None, max_creation_time: datetime = None, max_result: int = 20) -> Iterable:
+    def get_job_list(self, min_creation_time: datetime = None, max_creation_time: datetime = None, max_result: int = 20, all_users: bool = True) -> Iterable:
         """
         Args:
             min_creation_time (datetime.datetime, optional):
@@ -80,10 +80,12 @@ class EmsBigqueryClient:
                 If the datetime has no time zone assumes UTC time.
             max_result (int, optional):
                 Maximum number of jobs to return.
+            all_users (bool):
+                If true, retrieves jobs submitted by all users
         Yields:
             EmsQueryJob: the next job
         """
-        for job in self.__bigquery_client.list_jobs(all_users=True,
+        for job in self.__bigquery_client.list_jobs(all_users=all_users,
                                                     max_results=max_result,
                                                     min_creation_time=min_creation_time,
                                                     max_creation_time=max_creation_time):
@@ -159,12 +161,12 @@ class EmsBigqueryClient:
             return None
         return EmsWriteDisposition(disposition)
 
-    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_result: int = 20) -> list:
-        jobs = self.get_job_list(min_creation_time, max_creation_time, max_result)
+    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_result: int = 20, all_users: bool = True) -> list:
+        jobs = self.get_job_list(min_creation_time, max_creation_time, max_result, all_users=all_users)
         matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
-    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_attempts: int = 3,  max_result: int = None) -> list:
+    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_attempts: int = 3,  max_result: int = None, all_users: bool = True) -> list:
         def launch(job: Union[EmsQueryJob, EmsExtractJob]) -> str:
             prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, max_attempts)
 
@@ -175,7 +177,7 @@ class EmsBigqueryClient:
             else:
                 LOGGER.error(f"Unsupported job: {job}")
 
-        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_creation_time, max_result)
+        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_creation_time, max_result, all_users=all_users)
         failed_jobs = [x for x in jobs if x.is_failed]
         return [launch(job) for job in failed_jobs]
 
