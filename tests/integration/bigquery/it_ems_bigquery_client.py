@@ -54,9 +54,11 @@ class ItEmsBigqueryClient(TestCase):
         self.storage_client = storage.Client()
 
     def tearDown(self):
-        bucket = self.__get_test_bucket(self.TEST_BUCKET_NAME)
-        bucket.delete(True)
-
+        try:
+            bucket = self.storage_client.get_bucket(self.TEST_BUCKET_NAME)
+            bucket.delete(True)
+        except NotFound:
+            pass
 
     def __create_test_table(self, table_name, dataset_id):
         table_schema = [SchemaField("int_data", "INT64"), SchemaField("str_data", "STRING")]
