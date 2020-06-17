@@ -17,6 +17,7 @@ setup(
         "google-cloud-core==1.0.3",
         "google-api-core==1.14.2",
         "googleapis-common-protos==1.6.0",
-        "grpc-google-iam-v1==0.12.3"
+        "grpc-google-iam-v1==0.12.3",
+        "grpcio-gcp==0.2.2"
     ]
 )
