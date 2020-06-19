@@ -377,7 +377,7 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(arguments["location"], "valhalla")
         self.assertEqual(arguments["source"], TableReference.from_string(table))
 
-        self.assertEqual(arguments["job_config"].compression, job.compression)
+        self.assertEqual(arguments["job_config"].compression, 'NONE')
         self.assertEqual(arguments["job_config"].destination_format, job.destination_format)
         self.assertEqual(arguments["job_config"].field_delimiter, job.field_delimiter)
         self.assertEqual(arguments["job_config"].print_header, job.print_header)
@@ -472,7 +472,7 @@ class TestEmsBigqueryClient(TestCase):
         query_job_mock.job_id = job_id
         query_job_mock.destination_uris = ["uri1"]
         query_job_mock.source = TableReference.from_string(table)
-        query_job_mock.compression = "GZIP"
+        query_job_mock.compression = None
         query_job_mock.field_delimiter = ","
         query_job_mock.print_header = True
         query_job_mock.destination_format = "CSV"

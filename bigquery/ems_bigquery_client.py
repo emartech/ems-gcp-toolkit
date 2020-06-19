@@ -134,8 +134,8 @@ class EmsBigqueryClient:
         elif isinstance(job, ExtractJob):
             table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
             destination_uris = job.destination_uris
-            job_config = EmsExtractJobConfig(compression=Compression(job.compression),
-                                             destination_format=DestinationFormat(job.destination_format),
+            job_config = EmsExtractJobConfig(compression=Compression(job.compression) if job.compression else Compression.NONE,
+                                             destination_format=DestinationFormat(job.destination_format) if job.destination_format else DestinationFormat.CSV,
                                              field_delimiter=job.field_delimiter,
                                              print_header=job.print_header)
             return EmsExtractJob(job_id=job.job_id,
