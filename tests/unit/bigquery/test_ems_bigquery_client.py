@@ -280,6 +280,23 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(result[0].query_config.destination_dataset, None)
         self.assertEqual(result[0].query_config.destination_table, None)
 
+    def test_get_job_list_returnsJobsWithCreatedTime(self,
+                                                     bigquery_module_patch: bigquery):
+        bigquery_module_patch.Client.return_value = self.client_mock
+
+        created1 = datetime.fromtimestamp(123456)
+        created2 = datetime.fromtimestamp(234567)
+        first_job = self.__create_query_job_mock("prefixed-retry-2-some-job-id", True, created1)
+        second_job = self.__create_extract_job_mock("prefixed-retry-2-some-job-id", "p.d.table1", False, created2)
+        self.client_mock.list_jobs.return_value = [first_job, second_job]
+
+        ems_bigquery_client = EmsBigqueryClient("some-project-id")
+
+        jobs = ems_bigquery_client.get_jobs_with_prefix("prefixed", created1)
+
+        assert jobs[0].created == created1
+        assert jobs[1].created == created2
+
     def test_get_job_list_returnsJobWithEmsQueryJobConfigWithDispositionsConvertedCorrectly(self,
                                                                                             bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
@@ -453,7 +470,7 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(job.job_id, "1234")
         self.assertEqual(job.state, EmsJobState.DONE)
 
-    def __create_query_job_mock(self, job_id: str, has_error: bool):
+    def __create_query_job_mock(self, job_id: str, has_error: bool, created: datetime = datetime.now()):
         error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occurred'}
         query_job_mock = Mock(QueryJob)
         query_job_mock.job_id = job_id
@@ -464,9 +481,10 @@ class TestEmsBigqueryClient(TestCase):
         query_job_mock.create_disposition = None
         query_job_mock.write_disposition = None
         query_job_mock.error_result = error_result if has_error else None
+        query_job_mock.created = created
         return query_job_mock
 
-    def __create_extract_job_mock(self, job_id: str, table: str, has_error: bool):
+    def __create_extract_job_mock(self, job_id: str, table: str, has_error: bool, created: datetime = datetime.now()):
         error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occurred'}
         query_job_mock = Mock(ExtractJob)
         query_job_mock.job_id = job_id
@@ -478,6 +496,7 @@ class TestEmsBigqueryClient(TestCase):
         query_job_mock.destination_format = "CSV"
         query_job_mock.state = "DONE"
         query_job_mock.error_result = error_result if has_error else None
+        query_job_mock.created = created
         return query_job_mock
 
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):

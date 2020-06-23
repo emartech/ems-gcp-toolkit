@@ -69,7 +69,8 @@ class EmsBigqueryClient:
         except NotFound:
             return False
 
-    def get_job_list(self, min_creation_time: datetime = None, max_creation_time: datetime = None, max_result: int = 20, all_users: bool = True) -> Iterable:
+    def get_job_list(self, min_creation_time: datetime = None, max_creation_time: datetime = None, max_result: int = 20,
+                     all_users: bool = True) -> Iterable:
         """
         Args:
             min_creation_time (datetime.datetime, optional):
@@ -106,12 +107,15 @@ class EmsBigqueryClient:
                                        destination_project_id=project_id,
                                        destination_dataset=dataset_id,
                                        destination_table=table_id,
-                                       create_disposition=EmsBigqueryClient.__convert_to_ems_create_disposition(job.create_disposition),
-                                       write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(job.write_disposition))
+                                       create_disposition=EmsBigqueryClient.__convert_to_ems_create_disposition(
+                                           job.create_disposition),
+                                       write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(
+                                           job.write_disposition))
             return EmsQueryJob(job.job_id, job.query,
-                                  config,
-                                  EmsJobState(job.state),
-                                  job.error_result)
+                               config,
+                               EmsJobState(job.state),
+                               job.error_result,
+                               job.created)
         elif isinstance(job, LoadJob):
             destination = job.destination
             table_id, dataset_id, project_id = destination.table_id, destination.dataset_id, destination.project
@@ -128,22 +132,26 @@ class EmsBigqueryClient:
                                           job.write_disposition))
 
             return EmsLoadJob(job_id=job.job_id,
-                                 load_config=config,
-                                 state=EmsJobState(job.state),
-                                 error_result=None)
+                              load_config=config,
+                              state=EmsJobState(job.state),
+                              error_result=None,
+                              created=job.created)
         elif isinstance(job, ExtractJob):
             table = f'{job.source.project}.{job.source.dataset_id}.{job.source.table_id}'
             destination_uris = job.destination_uris
-            job_config = EmsExtractJobConfig(compression=Compression(job.compression) if job.compression else Compression.NONE,
-                                             destination_format=DestinationFormat(job.destination_format) if job.destination_format else DestinationFormat.CSV,
-                                             field_delimiter=job.field_delimiter,
-                                             print_header=job.print_header)
+            job_config = EmsExtractJobConfig(
+                compression=Compression(job.compression) if job.compression else Compression.NONE,
+                destination_format=DestinationFormat(
+                    job.destination_format) if job.destination_format else DestinationFormat.CSV,
+                field_delimiter=job.field_delimiter,
+                print_header=job.print_header)
             return EmsExtractJob(job_id=job.job_id,
                                  table=table,
                                  destination_uris=destination_uris,
                                  job_config=job_config,
                                  state=EmsJobState(job.state),
-                                 error_result=job.error_result)
+                                 error_result=job.error_result,
+                                 created=job.created)
         else:
             LOGGER.error(f"Unexpected job type for :{job}")
             LOGGER.error(f"Job type class: {job.__class__}")
@@ -161,12 +169,14 @@ class EmsBigqueryClient:
             return None
         return EmsWriteDisposition(disposition)
 
-    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_result: int = 20, all_users: bool = True) -> list:
+    def get_jobs_with_prefix(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None,
+                             max_result: int = 20, all_users: bool = True) -> list:
         jobs = self.get_job_list(min_creation_time, max_creation_time, max_result, all_users=all_users)
         matched_jobs = filter(lambda x: job_prefix in x.job_id, jobs)
         return list(matched_jobs)
 
-    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None, max_attempts: int = 3,  max_result: int = None, all_users: bool = True) -> list:
+    def relaunch_failed_jobs(self, job_prefix: str, min_creation_time: datetime, max_creation_time: datetime = None,
+                             max_attempts: int = 3, max_result: int = None, all_users: bool = True) -> list:
         def launch(job: Union[EmsQueryJob, EmsExtractJob]) -> str:
             prefix_with_retry = self.__decorate_id_with_retry(job.job_id, job_prefix, max_attempts)
 
@@ -177,7 +187,8 @@ class EmsBigqueryClient:
             else:
                 LOGGER.error(f"Unsupported job: {job}")
 
-        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_creation_time, max_result, all_users=all_users)
+        jobs = self.get_jobs_with_prefix(job_prefix, min_creation_time, max_creation_time, max_result,
+                                         all_users=all_users)
         failed_jobs = [x for x in jobs if x.is_failed]
         return [launch(job) for job in failed_jobs]
 
