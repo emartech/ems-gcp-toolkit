@@ -11,3 +11,8 @@ class EmsSpannerClient:
             results = snapshot.execute_sql(query)
             for row in results:
                 yield row
+
+    def execute_update(self, query: str):
+        def run_query(transaction):
+            transaction.execute_update(query)
+        self.__db.run_in_transaction(run_query)
