@@ -1,3 +1,4 @@
+
 import logging
 import re
 from collections import Iterable
@@ -295,6 +296,8 @@ class EmsBigqueryClient:
             job_config.destination = table_reference
             job_config.write_disposition = ems_query_job_config.write_disposition.value
             job_config.create_disposition = ems_query_job_config.create_disposition.value
+        if ems_query_job_config.time_partitioning is not None:
+            job_config.time_partitioning = ems_query_job_config.time_partitioning
         if ems_query_job_config.table_definitions is not None:
             job_config.table_definitions = ems_query_job_config.table_definitions
         return job_config

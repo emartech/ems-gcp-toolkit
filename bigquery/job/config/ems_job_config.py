@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from google.cloud.bigquery import TimePartitioning
 
 
 class EmsWriteDisposition(Enum):
@@ -27,12 +28,14 @@ class EmsJobConfig(ABC):
                  destination_table: str = None,
                  create_disposition: EmsCreateDisposition = EmsCreateDisposition.CREATE_IF_NEEDED,
                  write_disposition: EmsWriteDisposition = EmsWriteDisposition.WRITE_APPEND,
+                 time_partitioning: TimePartitioning = None,
                  table_definitions: dict = None) -> None:
         self.__destination_project_id = destination_project_id
         self.__destination_dataset = destination_dataset
         self.__create_disposition = create_disposition
         self.__write_disposition = write_disposition
         self.__destination_table = destination_table
+        self.__time_partitioning = time_partitioning
         self.__table_definitions = table_definitions
 
     @property
@@ -54,6 +57,10 @@ class EmsJobConfig(ABC):
     @property
     def write_disposition(self):
         return self.__write_disposition
+
+    @property
+    def time_partitioning(self):
+        return self.__time_partitioning
 
     @property
     def table_definitions(self):
