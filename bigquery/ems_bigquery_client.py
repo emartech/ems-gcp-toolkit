@@ -1,4 +1,3 @@
-
 import logging
 import re
 from collections import Iterable
@@ -15,7 +14,7 @@ from bigquery.ems_api_error import EmsApiError
 from bigquery.job.config.ems_extract_job_config import EmsExtractJobConfig, Compression, DestinationFormat
 from bigquery.job.config.ems_job_config import EmsJobPriority, EmsCreateDisposition, EmsWriteDisposition
 from bigquery.job.config.ems_load_job_config import EmsLoadJobConfig
-from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig
+from bigquery.job.config.ems_query_job_config import EmsQueryJobConfig, EmsTimePartitioning, EmsTimePartitioningType
 from bigquery.job.ems_extract_job import EmsExtractJob
 from bigquery.job.ems_job import EmsJob
 from bigquery.job.ems_job_state import EmsJobState
@@ -111,7 +110,9 @@ class EmsBigqueryClient:
                                        create_disposition=EmsBigqueryClient.__convert_to_ems_create_disposition(
                                            job.create_disposition),
                                        write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(
-                                           job.write_disposition))
+                                           job.write_disposition),
+                                       time_partitioning=EmsBigqueryClient.__convert_to_ems_time_partitioning(
+                                           job.time_partitioning))
             return EmsQueryJob(job.job_id, job.query,
                                config,
                                EmsJobState(job.state),
@@ -163,6 +164,15 @@ class EmsBigqueryClient:
         if disposition is None:
             return None
         return EmsCreateDisposition(disposition)
+
+    @staticmethod
+    def __convert_to_ems_time_partitioning(partitioning: TimePartitioning) -> EmsTimePartitioning:
+        if partitioning is None:
+            return None
+        return EmsTimePartitioning(type_=EmsTimePartitioningType(partitioning.type_),
+                                   field=partitioning.field,
+                                   expiration_ms=partitioning.expiration_ms,
+                                   require_partition_filter=partitioning.require_partition_filter)
 
     @staticmethod
     def __convert_to_ems_write_disposition(disposition):
@@ -296,8 +306,12 @@ class EmsBigqueryClient:
             job_config.destination = table_reference
             job_config.write_disposition = ems_query_job_config.write_disposition.value
             job_config.create_disposition = ems_query_job_config.create_disposition.value
-        if ems_query_job_config.time_partitioning is not None:
-            job_config.time_partitioning = ems_query_job_config.time_partitioning
+        partitioning = ems_query_job_config.time_partitioning
+        if partitioning is not None:
+            job_config.time_partitioning = TimePartitioning(partitioning.type.value,
+                                                            partitioning.field,
+                                                            partitioning.expiration_ms,
+                                                            partitioning.require_partition_filter)
         if ems_query_job_config.table_definitions is not None:
             job_config.table_definitions = ems_query_job_config.table_definitions
         return job_config

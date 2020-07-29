@@ -5,7 +5,8 @@ from unittest.mock import patch, Mock
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import bigquery
-from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField, ExtractJob
+from google.cloud.bigquery import QueryJob, QueryPriority, LoadJob, LoadJobConfig, SchemaField, ExtractJob, \
+    QueryJobConfig, TimePartitioning
 from google.cloud.bigquery.schema import _parse_schema_resource
 from google.cloud.bigquery.table import Row, TableReference
 
@@ -35,6 +36,8 @@ class TestEmsBigqueryClient(TestCase):
         self.query_job_mock.priority = "INTERACTIVE"
         self.query_job_mock.create_disposition = None
         self.query_job_mock.write_disposition = None
+        self.query_job_mock.time_partitioning = TimePartitioning("DAY", "a", None, None)
+
         self.query_config = EmsQueryJobConfig(destination_project_id="some_destination_project_id",
                                               destination_dataset="some_dataset",
                                               destination_table="some_table")
@@ -377,6 +380,8 @@ class TestEmsBigqueryClient(TestCase):
         arguments = self.client_mock.query.call_args_list[0][1]
         self.assertEqual("prefixed-retry-1-", arguments["job_id_prefix"])
         self.assertEqual(arguments["query"], "SIMPLE QUERY")
+        self.assertEqual(arguments["job_config"].time_partitioning, job.time_partitioning)
+
 
     def test_relaunch_failed_jobs_startsExtractJob(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
@@ -482,6 +487,8 @@ class TestEmsBigqueryClient(TestCase):
         query_job_mock.write_disposition = None
         query_job_mock.error_result = error_result if has_error else None
         query_job_mock.created = created
+        query_job_mock.time_partitioning = TimePartitioning("DAY", "a", None, None)
+
         return query_job_mock
 
     def __create_extract_job_mock(self, job_id: str, table: str, has_error: bool, created: datetime = datetime.now()):
