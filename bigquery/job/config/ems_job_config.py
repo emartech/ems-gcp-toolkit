@@ -28,13 +28,15 @@ class EmsJobConfig(ABC):
                  destination_table: str = None,
                  create_disposition: EmsCreateDisposition = EmsCreateDisposition.CREATE_IF_NEEDED,
                  write_disposition: EmsWriteDisposition = EmsWriteDisposition.WRITE_APPEND,
-                 table_definitions: dict = None) -> None:
+                 table_definitions: dict = None,
+                 labels: dict = {}) -> None:
         self.__destination_project_id = destination_project_id
         self.__destination_dataset = destination_dataset
         self.__create_disposition = create_disposition
         self.__write_disposition = write_disposition
         self.__destination_table = destination_table
         self.__table_definitions = table_definitions
+        self.__labels = labels
 
     @property
     def destination_project_id(self):
@@ -59,3 +61,7 @@ class EmsJobConfig(ABC):
     @property
     def table_definitions(self):
         return self.__table_definitions
+
+    @property
+    def labels(self):
+        return self.__labels

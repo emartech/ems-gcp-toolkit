@@ -112,7 +112,8 @@ class EmsBigqueryClient:
                                        write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(
                                            job.write_disposition),
                                        time_partitioning=EmsBigqueryClient.__convert_to_ems_time_partitioning(
-                                           job.time_partitioning))
+                                           job.time_partitioning),
+                                       labels=job.labels)
             return EmsQueryJob(job.job_id, job.query,
                                config,
                                EmsJobState(job.state),
@@ -131,7 +132,8 @@ class EmsBigqueryClient:
                                       create_disposition=EmsBigqueryClient.__convert_to_ems_create_disposition(
                                           job.create_disposition),
                                       write_disposition=EmsBigqueryClient.__convert_to_ems_write_disposition(
-                                          job.write_disposition))
+                                          job.write_disposition),
+                                      labels=job.labels)
 
             return EmsLoadJob(job_id=job.job_id,
                               load_config=config,
@@ -146,7 +148,8 @@ class EmsBigqueryClient:
                 destination_format=DestinationFormat(
                     job.destination_format) if job.destination_format else DestinationFormat.CSV,
                 field_delimiter=job.field_delimiter,
-                print_header=job.print_header)
+                print_header=job.print_header,
+                labels=job.labels)
             return EmsExtractJob(job_id=job.job_id,
                                  table=table,
                                  destination_uris=destination_uris,
@@ -277,6 +280,7 @@ class EmsBigqueryClient:
 
     def __create_load_job_config(self, ems_load_job_config: EmsLoadJobConfig) -> LoadJobConfig:
         config = LoadJobConfig()
+        config.labels = ems_load_job_config.labels
         config.create_disposition = ems_load_job_config.create_disposition.value
         config.write_disposition = ems_load_job_config.write_disposition.value
         config.schema = _parse_schema_resource(ems_load_job_config.schema)
@@ -286,6 +290,7 @@ class EmsBigqueryClient:
     def __create_extract_job_config(self, ems_job_config: EmsExtractJobConfig) -> ExtractJobConfig:
         config = ExtractJobConfig()
 
+        config.labels = ems_job_config.labels
         config.compression = ems_job_config.compression.value
         config.destination_format = ems_job_config.destination_format.value
         config.field_delimiter = ems_job_config.field_delimiter
@@ -297,6 +302,7 @@ class EmsBigqueryClient:
         job_config.priority = ems_query_job_config.priority.value
         job_config.use_legacy_sql = False
         job_config.use_query_cache = ems_query_job_config.use_query_cache
+        job_config.labels = ems_query_job_config.labels
         if ems_query_job_config.destination_table is not None:
             job_config.time_partitioning = TimePartitioning("DAY")
             table_reference = TableReference(

@@ -40,7 +40,8 @@ class TestEmsBigqueryClient(TestCase):
 
         self.query_config = EmsQueryJobConfig(destination_project_id="some_destination_project_id",
                                               destination_dataset="some_dataset",
-                                              destination_table="some_table")
+                                              destination_table="some_table",
+                                              labels={"label1": "label1_value"})
 
     def test_properties(self, bigquery_module_patch: bigquery):
         ems_bigquery_client = self.__setup_client(bigquery_module_patch, None, "valhalla")
@@ -104,7 +105,8 @@ class TestEmsBigqueryClient(TestCase):
                                            destination_dataset="some-destination-dataset",
                                            destination_table="some-destination-table",
                                            schema=input_json_schema,
-                                           source_uri_template=source_uri)
+                                           source_uri_template=source_uri,
+                                           labels={"label1": "label1_value"})
         self.load_job_mock = Mock(LoadJob)
         self.load_job_mock.job_id = self.JOB_ID
         self.client_mock.load_table_from_uri.return_value = self.load_job_mock
@@ -120,6 +122,7 @@ class TestEmsBigqueryClient(TestCase):
         self.assertIsInstance(job_config, LoadJobConfig)
         self.assertEqual(job_config.create_disposition, EmsCreateDisposition.CREATE_IF_NEEDED.value)
         self.assertEqual(job_config.write_disposition, EmsWriteDisposition.WRITE_APPEND.value)
+        self.assertEqual(job_config.labels, {"label1": "label1_value"})
 
         field1 = SchemaField("f1", "STRING")
         field2 = SchemaField("f2", "INTEGER", "REQUIRED")
@@ -140,7 +143,8 @@ class TestEmsBigqueryClient(TestCase):
         ems_job_config = EmsExtractJobConfig(compression=Compression.GZIP,
                                              destination_format=DestinationFormat.CSV,
                                              field_delimiter="Deli mit R",
-                                             print_header=True)
+                                             print_header=True,
+                                             labels={"label1": "label1_value"})
 
         ems_bigquery_client = EmsBigqueryClient(project_id, "Emelet")
         result_job_id = ems_bigquery_client.run_async_extract_job(job_id_prefix=job_prefix,
@@ -158,6 +162,7 @@ class TestEmsBigqueryClient(TestCase):
         assert args["job_config"].destination_format == "CSV"
         assert args["job_config"].field_delimiter == "Deli mit R"
         assert args["job_config"].print_header == True
+        assert args["job_config"].labels == {"label1": "label1_value"}
         assert result_job_id == expected_job_id
 
     def test_run_sync_query_submitsInteractiveQueryAndReturnsWithResultIterator(self, bigquery_module_patch: bigquery):
@@ -381,6 +386,7 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual("prefixed-retry-1-", arguments["job_id_prefix"])
         self.assertEqual(arguments["query"], "SIMPLE QUERY")
         self.assertEqual(arguments["job_config"].time_partitioning, job.time_partitioning)
+        self.assertEqual(arguments["job_config"].labels, {"label1": "label1_value"})
 
 
     def test_relaunch_failed_jobs_startsExtractJob(self, bigquery_module_patch: bigquery):
@@ -403,6 +409,7 @@ class TestEmsBigqueryClient(TestCase):
         self.assertEqual(arguments["job_config"].destination_format, job.destination_format)
         self.assertEqual(arguments["job_config"].field_delimiter, job.field_delimiter)
         self.assertEqual(arguments["job_config"].print_header, job.print_header)
+        self.assertEqual(arguments["job_config"].labels, {"label1": "label1_value"})
 
     def test_relaunch_failed_jobs_startsNewJobForAllFailedJobs(self, bigquery_module_patch: bigquery):
         bigquery_module_patch.Client.return_value = self.client_mock
@@ -482,6 +489,7 @@ class TestEmsBigqueryClient(TestCase):
         query_job_mock.priority = "INTERACTIVE"
         query_job_mock.destination = None
         query_job_mock.query = "SIMPLE QUERY"
+        query_job_mock.labels = {"label1": "label1_value"}
         query_job_mock.state = "DONE"
         query_job_mock.create_disposition = None
         query_job_mock.write_disposition = None
@@ -493,18 +501,19 @@ class TestEmsBigqueryClient(TestCase):
 
     def __create_extract_job_mock(self, job_id: str, table: str, has_error: bool, created: datetime = datetime.now()):
         error_result = {'reason': 'someReason', 'location': 'query', 'message': 'error occurred'}
-        query_job_mock = Mock(ExtractJob)
-        query_job_mock.job_id = job_id
-        query_job_mock.destination_uris = ["uri1"]
-        query_job_mock.source = TableReference.from_string(table)
-        query_job_mock.compression = None
-        query_job_mock.field_delimiter = ","
-        query_job_mock.print_header = True
-        query_job_mock.destination_format = "CSV"
-        query_job_mock.state = "DONE"
-        query_job_mock.error_result = error_result if has_error else None
-        query_job_mock.created = created
-        return query_job_mock
+        extract_job_mock = Mock(ExtractJob)
+        extract_job_mock.job_id = job_id
+        extract_job_mock.destination_uris = ["uri1"]
+        extract_job_mock.labels = {"label1": "label1_value"}
+        extract_job_mock.source = TableReference.from_string(table)
+        extract_job_mock.compression = None
+        extract_job_mock.field_delimiter = ","
+        extract_job_mock.print_header = True
+        extract_job_mock.destination_format = "CSV"
+        extract_job_mock.state = "DONE"
+        extract_job_mock.error_result = error_result if has_error else None
+        extract_job_mock.created = created
+        return extract_job_mock
 
     def __setup_client(self, bigquery_module_patch, return_value=None, location=None):
         project_id = "some-project-id"
