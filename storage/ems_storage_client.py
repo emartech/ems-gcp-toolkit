@@ -49,6 +49,9 @@ class EmsStorageClient:
             if notification.topic_name == topic_name:
                 notification.delete()
 
+    def is_blob_empty(self, bucket_name: str, blob_name: str):
+        return self.__client.get_bucket(bucket_name).get_blob(blob_name).size == 0
+
     @staticmethod
     def is_notification_exists(bucket, topic_name):
         for notification in bucket.list_notifications():
