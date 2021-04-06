@@ -7,7 +7,7 @@ from typing import List, Union
 from google.api_core.exceptions import GoogleAPIError, NotFound, Conflict
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
-    LoadJobConfig, LoadJob, ExtractJobConfig, ExtractJob
+    LoadJobConfig, LoadJob, ExtractJobConfig, ExtractJob, CopyJob, CopyJobConfig, UnknownJob
 from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
 
 from bigquery.ems_api_error import EmsApiError
@@ -158,8 +158,7 @@ class EmsBigqueryClient:
                                  error_result=job.error_result,
                                  created=job.created)
         else:
-            LOGGER.error(f"Unexpected job type for :{job}")
-            LOGGER.error(f"Job type class: {job.__class__}")
+            LOGGER.warning(f"Unexpected job type for : {job.job_id}, with type class: {job.__class__}")
             return None
 
     @staticmethod
