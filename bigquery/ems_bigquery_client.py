@@ -7,7 +7,7 @@ from typing import List, Union
 from google.api_core.exceptions import GoogleAPIError, NotFound, Conflict
 from google.cloud import bigquery
 from google.cloud.bigquery import QueryJobConfig, QueryJob, TableReference, DatasetReference, TimePartitioning, \
-    LoadJobConfig, LoadJob, ExtractJobConfig, ExtractJob, CopyJob, CopyJobConfig, UnknownJob
+    LoadJobConfig, LoadJob, ExtractJobConfig, ExtractJob
 from google.cloud.bigquery.schema import _parse_schema_resource, _build_schema_resource
 
 from bigquery.ems_api_error import EmsApiError
@@ -275,7 +275,8 @@ class EmsBigqueryClient:
         return self.__bigquery_client.query(query=query,
                                             job_config=(self.__create_job_config(ems_query_job_config)),
                                             job_id_prefix=job_id_prefix,
-                                            location=self.__location)
+                                            location=self.__location,
+                                            retry=bigquery.DEFAULT_RETRY.with_deadline(300))
 
     def __create_load_job_config(self, ems_load_job_config: EmsLoadJobConfig) -> LoadJobConfig:
         config = LoadJobConfig()
