@@ -1,4 +1,5 @@
 import logging
+from builtins import BrokenPipeError
 
 from googleapiclient import discovery
 from googleapiclient.errors import HttpError
@@ -78,7 +79,12 @@ class EmsCloudsqlClient:
 
         @retry(wait=wait_fixed(1),
                stop=stop_after_delay(timeout_seconds),
-               retry=retry_if_result(lambda result: result["status"] != "DONE") | retry_if_exception_type(HttpError))
+               retry=(
+                       retry_if_result(lambda result: result["status"] != "DONE")
+                       | retry_if_exception_type(HttpError)
+                       | retry_if_exception_type(BrokenPipeError)
+                     )
+               )
         def __wait_for_job_done_helper() -> dict:
             ops_request = self.__discovery_service.operations().get(project=self.__project_id, operation=ops_id)
             ops_response = ops_request.execute()
