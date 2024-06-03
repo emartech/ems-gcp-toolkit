@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from google.cloud.bigquery import TimePartitioning
 
 
 class EmsWriteDisposition(Enum):

@@ -56,7 +56,7 @@ class ItEmsBigqueryClient(TestCase):
     def tearDown(self):
         try:
             bucket = self.storage_client.get_bucket(self.TEST_BUCKET_NAME)
-            bucket.delete(True)
+            bucket.delete(force=True)
         except NotFound:
             pass
 
@@ -331,7 +331,7 @@ class ItEmsBigqueryClient(TestCase):
         result = self.client.run_sync_query(query=query)
         expected = [{"fruit": "apple", "quantity": random_quantity, "is_delicious": True,
                      "best_before": datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)}]
-        self.assertEquals(expected, list(result))
+        self.assertEqual(expected, list(result))
 
     def test_run_async_load_job_whenLoadingFileWithHeader_headerIsSkiped(self):
         bucket_name = "it_test_ems_gcp_toolkit"

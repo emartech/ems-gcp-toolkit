@@ -13,7 +13,7 @@ class EmsMessage:
     @property
     def data_json(self):
         if self.__data is None:
-            self.__data = json.loads(self.__raw_data, encoding="utf-8")
+            self.__data = json.loads(self.__raw_data)
 
         return self.__data
 

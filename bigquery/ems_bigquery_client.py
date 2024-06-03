@@ -1,8 +1,7 @@
 import logging
 import re
-from collections import Iterable
 from datetime import datetime
-from typing import List, Union
+from typing import List, Union, Iterable
 
 from google.api_core.exceptions import GoogleAPIError, NotFound, Conflict
 from google.cloud import bigquery
