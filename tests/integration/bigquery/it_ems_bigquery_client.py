@@ -357,7 +357,7 @@ class ItEmsBigqueryClient(TestCase):
 
         result = self.client.run_sync_query(query=query)
         expected = [{"COLUMN": "ROW"}]
-        self.assertEquals(expected, list(result))
+        self.assertEqual(expected, list(result))
 
     def test_dataset_exists_WhenDatasetNotExists(self):
         dataset_id = self.__generate_test_name("dataset")
