@@ -28,6 +28,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         pip install -r requirements.txt
+    - id: 'auth'
+      uses: google-github-actions/auth@v1
+      with:
+        workload_identity_provider: "${{ secrets.VPC_SC_WORKLOAD_IDENTITY_PROVIDER }}"
+        service_account: 'ems-gcp-toolkit@sap-vpc-sc-provisioning.iam.gserviceaccount.com'
     - name: Test with pytest
       run: |
         pytest -o python_files="test_*.py"
