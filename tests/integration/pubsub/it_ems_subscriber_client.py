@@ -29,7 +29,7 @@ class ItEmsSubscriberClient(TestCase):
             self.fail("create_subscription_if_not_exists raised AlreadyExists error")
 
         topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, topic_name)
-        subscriptions = list(self.__publisher_client.api.list_topic_subscriptions(topic_path))
+        subscriptions = list(self.__publisher_client.api.list_topic_subscriptions(request={"name": topic_path}))
 
         expected_subscriptions = ["projects/" + GCP_PROJECT_ID + "/subscriptions/" + subscription_name]
         self.assertEqual(expected_subscriptions, subscriptions)
@@ -51,17 +51,17 @@ class ItEmsSubscriberClient(TestCase):
 
         subscription_path = self.__subscriber_client.api.subscription_path(GCP_PROJECT_ID, subscription_name)
         with self.assertRaises(NotFound):
-            self.__subscriber_client.api.get_subscription(subscription_path)
+            self.__subscriber_client.api.get_subscription(request={"subscription": subscription_path})
 
         self.__delete_topic(topic_name)
 
     def __delete_topic(self, topic_name):
         topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, topic_name)
-        self.__publisher_client.api.delete_topic(topic_path)
+        self.__publisher_client.api.delete_topic(request={"topic": topic_path})
 
     def __delete_subscription(self, subscription_name: str):
         subscription_path = self.__subscriber_client.api.subscription_path(GCP_PROJECT_ID, subscription_name)
-        self.__subscriber_client.api.delete_subscription(subscription_path)
+        self.__subscriber_client.api.delete_subscription(request={"subscription": subscription_path})
 
     @staticmethod
     def __generate_test_name(context: str):
