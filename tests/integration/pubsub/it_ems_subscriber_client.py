@@ -29,7 +29,7 @@ class ItEmsSubscriberClient(TestCase):
             self.fail("create_subscription_if_not_exists raised AlreadyExists error")
 
         topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, topic_name)
-        subscriptions = list(self.__publisher_client.api.list_topic_subscriptions(request={"name": topic_path}))
+        subscriptions = list(self.__publisher_client.api.list_topic_subscriptions(request={"topic": topic_path}))
 
         expected_subscriptions = ["projects/" + GCP_PROJECT_ID + "/subscriptions/" + subscription_name]
         self.assertEqual(expected_subscriptions, subscriptions)
