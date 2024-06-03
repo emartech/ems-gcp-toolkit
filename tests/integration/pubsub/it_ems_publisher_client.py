@@ -21,7 +21,7 @@ class ItEmsPublisherClient(TestCase):
         self.__ems_publisher_client.topic_create_if_not_exists(GCP_PROJECT_ID, expected_topic_name)
 
         try:
-            topic = self.__publisher_client.api.get_topic(expected_topic_path)
+            topic = self.__publisher_client.api.get_topic(request={"topic": expected_topic_path})
         except NotFound:
             self.fail(f"Topic not created with name {expected_topic_name}")
 
@@ -52,7 +52,7 @@ class ItEmsPublisherClient(TestCase):
 
         try:
             topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, expected_topic_name)
-            subscriptions = self.__publisher_client.api.list_topic_subscriptions(topic_path)
+            subscriptions = self.__publisher_client.api.list_topic_subscriptions(request={"topic": topic_path})
 
             for subscription in subscriptions:
                 subscription_list.append(subscription)
@@ -80,17 +80,17 @@ class ItEmsPublisherClient(TestCase):
 
         topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, topic_name)
         with self.assertRaises(NotFound):
-            self.__publisher_client.api.get_topic(topic_path)
+            self.__publisher_client.api.get_topic(request={"topic": topic_path})
 
     def __delete_topic(self, topic_name):
         topic_path = self.__publisher_client.api.topic_path(GCP_PROJECT_ID, topic_name)
-        self.__publisher_client.api.delete_topic(topic_path)
+        self.__publisher_client.api.delete_topic(request={"topic": topic_path})
 
     @staticmethod
     def __delete_subscription(subscription_name: str):
         subscriber_client = SubscriberClient()
         subscription_path = subscriber_client.api.subscription_path(GCP_PROJECT_ID, subscription_name)
-        subscriber_client.api.delete_subscription(subscription_path)
+        subscriber_client.api.delete_subscription(request={"subscription": subscription_path})
 
     @staticmethod
     def __generate_test_name(context: str):
