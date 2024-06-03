@@ -26,7 +26,7 @@ class EmsPublisherClient:
     def delete_topic_if_exists(self, project_id: str, topic_name: str):
         topic_path = self.__client.api.topic_path(project_id, topic_name)
         try:
-            self.__client.api.delete_topic(request={"name": topic_path})
+            self.__client.api.delete_topic(request={"topic": topic_path})
             LOGGER.info("Topic %s deleted in project %s", topic_name, project_id)
         except NotFound:
             LOGGER.info("Topic %s not found in project %s", topic_name, project_id)
