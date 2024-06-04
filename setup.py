@@ -15,7 +15,6 @@ setup(
         "google-cloud-pubsub>=2,<3",
         "google-cloud-bigquery>=3,<4",
         "google-cloud-core>=2,<3",
-        "google-api-core>=2,<3",
         "googleapis-common-protos>=1.63.0,<2",
         "grpc-google-iam-v1==0.13.0"
     ]
