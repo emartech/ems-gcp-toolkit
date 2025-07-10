@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ems-gcp-toolkit",
-    version="0.2.3",
+    version="0.2.2",
     packages=find_packages(exclude="tests"),
     url="https://github.com/emartech/ems-gcp-toolkit",
     license="MIT",
@@ -10,7 +10,7 @@ setup(
     author_email="",
     description="",
     install_requires=[
-        "google-cloud-storage>=3,<4",
+        "google-cloud-storage>=2,<3",
         "google-cloud-spanner>=3,<4",
         "google-cloud-pubsub>=2,<3",
         "google-cloud-bigquery>=3,<4",
